@@ -15,6 +15,7 @@ import xgboost as xgb
 from sklearn.metrics import mean_absolute_error
 import seaborn as sns
 import matplotlib.pyplot as plt
+from model.model_train import cv_train, set_model
 
 # 메인 실행 코드
 if __name__ == "__main__":
@@ -48,22 +49,14 @@ if __name__ == "__main__":
     train_data, test_data = select_features(train_data, test_data)
     
     # train_data split
-    X ,y = split_features_and_target(train_data)
+    X, y = split_features_and_target(train_data)
     
     # Model train and evaulate
     best_params = {'n_estimators': 249, 'learning_rate': 0.1647758714498898, 'max_depth': 12, 'subsample': 0.9996749158433582}
-    kfold = KFold(n_splits=5, shuffle=True, random_state=42)
-    mae = []
-    for train_idx, valid_idx in kfold.split(X, train_data["deposit"]):
-        X_train, y_train = X.loc[train_idx, :], y.loc[train_idx, "log_deposit"]
-        X_valid, y_valid = X.loc[valid_idx, :], y.loc[valid_idx, "deposit"]
-        best_model = xgb.XGBRegressor(**best_params, tree_method="hist", device = "cuda", random_state=42)
-        best_model.fit(X_train, y_train)
-        y_pred = best_model.predict(X_valid)
-        y_pred = np.expm1(y_pred)
-        mae.append(mean_absolute_error(y_valid, y_pred))
+    best_model = set_model(args.model, train_type="regression", **best_params)
+    mae = cv_train(best_model, X, y)
 
-    print(f"{np.mean(mae):.4f}")
+    best_model = best_model.train(X, y["log_deposit"])
     
     # 테스트 데이터에 대한 예측 및 제출 파일 생성
     save_csv(best_model, test_data, sample_submission)

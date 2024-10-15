@@ -2,10 +2,10 @@ import pandas as pd
 import numpy as np
 from sklearn.metrics import mean_absolute_error
 from sklearn.model_selection import KFold
-from TreeModel import XGBoost, LightGBM, CatBoost
+from model.TreeModel import XGBoost, LightGBM, CatBoost
 RANDOM_SEED = 42
 
-def set_model(model_name: str, train_type: str, **params) -> Any:
+def set_model(model_name: str, train_type: str, **params):
     match model_name:
         case "xgboost":
             model = XGBoost(**params)
