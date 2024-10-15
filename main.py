@@ -31,6 +31,7 @@ if __name__ == "__main__":
         train_data["longitude"].isin(conditioned_groups_index.get_level_values(1))
     ]
     train_data.drop(small_groups.index, axis=0, inplace=True)
+    
     # built_year > 2024 행 삭제
     train_data = train_data[train_data["built_year"] < 2024]
     train_data.reset_index(drop=True, inplace=True)
