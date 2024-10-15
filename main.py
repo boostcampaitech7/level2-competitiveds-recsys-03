@@ -22,6 +22,7 @@ from model.model_train import cv_train, set_model
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(prog = "수도권 아파트 전세 예측", description="사용법 python train.py --model 모델명(소문자)")
     parser.add_argument("--model", type=str, choices=["xgboost", "lightgbm", "catboost", "ensemble"], default="xgboost", help="Select the model to train")
+    parser.add_argument("--optuna", type=str, choices=["on", "off"], default="off", help="Select Optuna option")
     parser.add_argument("--project", type=str, default="no_name", help="Input the project name")
     parser.add_argument("--run", type=str, default="no_name", help="Input the run name")
     args = parser.parse_args()
