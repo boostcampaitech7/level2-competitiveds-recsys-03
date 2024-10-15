@@ -1,6 +1,7 @@
 from data.feature_engineering import find_nearest_haversine_distance
 from data.load_dataset import load_dataset
 from model.inference import save_csv
+from model.feature_select import select_features
 import argparse
 import os
 import pandas as pd
@@ -45,35 +46,7 @@ if __name__ == "__main__":
     test_data["log_subway_distance"] = np.log1p(test_data["nearest_subway_distance"])
     
     # 3. Feature Select
-    # train 피처 및 타겟 설정
-    train_cols = [
-        "deposit",
-        "log_deposit",
-        "log_area_m2",
-        "built_year",
-        "latitude",
-        "longitude",
-        "log_subway_distance",
-        "log_school_distance",
-        "log_park_distance",
-        "contract_year_month",
-        "contract_day",
-    ]
-    train_data = train_data[train_cols]
-    
-    # test 피처 및 타겟 설정
-    test_cols = [
-        "log_area_m2",
-        "built_year",
-        "latitude",
-        "longitude",
-        "log_subway_distance",
-        "log_school_distance",
-        "log_park_distance",
-        "contract_year_month",
-        "contract_day",
-    ]
-    test_data = test_data[test_cols]
+    train_data, test_data = select_features(train_data, test_data)
     
     # 데이터 분리
     X = train_data.drop(columns=["deposit", "log_deposit"], inplace=False)
