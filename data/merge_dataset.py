@@ -108,4 +108,77 @@ def merge_dataset(
         inplace=True
     )
 
+
+    # subway_data, school_data, park_data에서 각각 위도와 경도로 그룹화하여 개수 세기
+    # 개수를 센 데이터를 subway_count, school_count, park_count로 반환
+    subway_count: pd.DataFrame = subway_data.groupby(["latitude", "longitude"]).size().reset_index(name='nearest_subway_num')
+    school_count: pd.DataFrame = school_data.groupby(["latitude", "longitude"]).size().reset_index(name='nearest_school_num')
+    park_count: pd.DataFrame = park_data.groupby(["latitude", "longitude"]).size().reset_index(name='nearest_park_num')
+
+    # train_data에 최단거리 지하철의 위도, 경도에 대한 지하철 개수 정보 추가
+    train_data: pd.DataFrame = pd.merge(train_data, subway_count, left_on=["nearest_subway_latitude", "nearest_subway_longitude"],
+                                        right_on=["latitude", "longitude"], how="left")
+    train_data: pd.DataFrame = train_data.drop(columns=["latitude_y", "longitude_y"])
+    train_data.rename(columns={
+        "latitude_x": "latitude",
+        "longitude_x": "longitude",
+        },
+        inplace=True
+    )
+
+    # test_data에 최단거리 지하철의 위도, 경도에 대한 지하철 개수 정보 추가
+    test_data: pd.DataFrame = pd.merge(test_data, subway_count, left_on=["nearest_subway_latitude", "nearest_subway_longitude"],
+                                        right_on=["latitude", "longitude"], how="left")
+    test_data: pd.DataFrame = test_data.drop(columns=["latitude_y", "longitude_y"])
+    test_data.rename(columns={
+        "latitude_x": "latitude",
+        "longitude_x": "longitude",
+        },
+        inplace=True
+    )
+
+    # train_data에 최단거리 학교의 위도, 경도에 대한 학교 개수 정보 추가
+    train_data: pd.DataFrame = pd.merge(train_data, school_count, left_on=["nearest_school_latitude", "nearest_school_longitude"],
+                                        right_on=["latitude", "longitude"], how="left")
+    train_data: pd.DataFrame = train_data.drop(columns=["latitude_y", "longitude_y"])
+    train_data.rename(columns={
+        "latitude_x": "latitude",
+        "longitude_x": "longitude",
+        },
+        inplace=True
+    )
+
+    # test_data에 최단거리 학교의 위도, 경도에 대한 학교 개수 정보 추가
+    test_data: pd.DataFrame = pd.merge(test_data, school_count, left_on=["nearest_school_latitude", "nearest_school_longitude"],
+                                        right_on=["latitude", "longitude"], how="left")
+    test_data: pd.DataFrame = test_data.drop(columns=["latitude_y", "longitude_y"])
+    test_data.rename(columns={
+        "latitude_x": "latitude",
+        "longitude_x": "longitude",
+        },
+        inplace=True
+    )
+
+    # train_data에 최단거리 공원의 위도, 경도에 대한 공원 개수 정보 추가
+    train_data: pd.DataFrame = pd.merge(train_data, park_count, left_on=["nearest_park_latitude", "nearest_park_longitude"],
+                                        right_on=["latitude", "longitude"], how="left")
+    train_data: pd.DataFrame = train_data.drop(columns=["latitude_y", "longitude_y"])
+    train_data.rename(columns={
+        "latitude_x": "latitude",
+        "longitude_x": "longitude",
+        },
+        inplace=True
+    )
+
+    # test_data에 최단거리 공원의 위도, 경도에 대한 공원 개수 정보 추가
+    test_data: pd.DataFrame = pd.merge(test_data, park_count, left_on=["nearest_park_latitude", "nearest_park_longitude"],
+                                        right_on=["latitude", "longitude"], how="left")
+    test_data: pd.DataFrame = test_data.drop(columns=["latitude_y", "longitude_y"])
+    test_data.rename(columns={
+        "latitude_x": "latitude",
+        "longitude_x": "longitude",
+        },
+        inplace=True
+    )
+
     return train_data, test_data
