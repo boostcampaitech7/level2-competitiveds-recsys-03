@@ -1,5 +1,6 @@
 from data.feature_engineering import find_nearest_haversine_distance
 from data.load_dataset import load_dataset
+from data.merge_dataset import merge_dataset
 from model.inference import save_csv
 from model.feature_select import select_features
 from model.data_split import split_features_and_target
@@ -21,7 +22,10 @@ if __name__ == "__main__":
     parser.add_argument("--model", type=str, choices=["xgboost", "lightgbm", "catboost", "ensemble"], default="xgboost", help="Select the model to train")
     args = parser.parse_args()
     # 1. 데이터 로드
-    train_data, test_data, sample_submission = load_dataset()
+    # 기존 데이터 불러오기
+    train_data, test_data, sample_submission, interest_data, subway_data, school_data, park_data = load_dataset()
+    # 기존 데이터에 새로운 feature들을 병합한 데이터프레임 불러오기
+    train_data, test_data = merge_dataset(train_data, test_data, interest_data, subway_data, school_data, park_data)
     
     # 2. 데이터 전처리
     # 위치 중복도 낮은 행 삭제
