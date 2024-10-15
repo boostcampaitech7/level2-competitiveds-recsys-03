@@ -16,7 +16,7 @@ import xgboost as xgb
 from sklearn.metrics import mean_absolute_error
 import seaborn as sns
 import matplotlib.pyplot as plt
-from model.model_train import cv_train, set_model
+from model.model_train import cv_train, set_model, optuna_train
 
 # 메인 실행 코드
 if __name__ == "__main__":
@@ -70,10 +70,21 @@ if __name__ == "__main__":
     X, y = split_features_and_target(train_data)
     
     # Model train and evaulate
-    best_params = {'n_estimators': 249, 'learning_rate': 0.1647758714498898, 'max_depth': 12, 'subsample': 0.9996749158433582}
-    best_model = set_model(args.model, train_type="regression", **best_params)
-    mae = cv_train(best_model, X, y)
+    
+    if args.optuna == "on":
+        best_params, mae = optuna_train(args.model, X, y)
+    else:
+        best_params = {
+            'n_estimators': 249,
+            'learning_rate': 0.1647758714498898,
+            'max_depth': 12,
+            'subsample': 0.9996749158433582
+        }
 
+        best_model = set_model(args.model, train_type="regression", **best_params)
+        mae = cv_train(best_model, X, y)
+
+    best_model = set_model(args.model, train_type="regression", **best_params)
     best_model = best_model.train(X, y["log_deposit"])
     
     # WandB log and finish

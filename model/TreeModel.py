@@ -1,6 +1,7 @@
 from xgboost import XGBClassifier, XGBRegressor
 from lightgbm import LGBMClassifier, LGBMRegressor
 from catboost import CatBoostClassifier, CatBoostRegressor
+import optuna
 
 class XGBoost:
     def __init__(self, random_seed=42, **params):
