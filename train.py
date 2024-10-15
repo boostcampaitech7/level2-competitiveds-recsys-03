@@ -1,5 +1,6 @@
 from data.feature_engineering import find_nearest_haversine_distance
 from data.load_dataset import load_dataset
+from model.inference import save_csv
 import argparse
 import os
 import pandas as pd
@@ -94,8 +95,5 @@ if __name__ == "__main__":
     print(f"{np.mean(mae):.4f}")
     
     # 5. 테스트 데이터에 대한 예측 및 제출 파일 생성
-    y_test_log = best_model.predict(test_data)
-    y_test = np.expm1(y_test_log) # 지수변환 (로그변환의 역변환)
-    sample_submission["deposit"] = y_test
-    sample_submission.to_csv("output.csv", index=False)
+    save_csv(best_model, test_data, sample_submission)
     
