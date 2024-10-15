@@ -5,6 +5,7 @@ from model.inference import save_csv
 from model.feature_select import select_features
 from model.data_split import split_features_and_target
 from model.log_transformation import apply_log_transformation
+from model.model_train import cv_train, set_model, optuna_train
 import argparse
 import os
 import pandas as pd
@@ -16,7 +17,6 @@ import xgboost as xgb
 from sklearn.metrics import mean_absolute_error
 import seaborn as sns
 import matplotlib.pyplot as plt
-from model.model_train import cv_train, set_model, optuna_train
 
 # 메인 실행 코드
 if __name__ == "__main__":
@@ -35,8 +35,7 @@ if __name__ == "__main__":
         project=args.project, # project name
         name=args.run, # run name
         config={
-            "random_state": 42,
-            "device": "cuda"
+            "User": os.path.basename(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
         } # common setting
     )
 
@@ -64,7 +63,7 @@ if __name__ == "__main__":
     train_data, test_data = apply_log_transformation(train_data, test_data)
     
     # Feature Select
-    train_data, test_data, train_cols = select_features(train_data, test_data)
+    train_data, test_data = select_features(train_data, test_data)
     
     # train_data split
     X, y = split_features_and_target(train_data)
@@ -86,10 +85,10 @@ if __name__ == "__main__":
 
     best_model = set_model(args.model, train_type="regression", **best_params)
     best_model = best_model.train(X, y["log_deposit"])
-    
+
     # WandB log and finish
     wandb.log({
-        "features": train_cols,
+        "features": list(train_data.columns),
         "model": args.model,
         "params": best_params,
         "valid MAE": mae

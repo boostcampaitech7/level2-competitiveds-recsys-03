@@ -29,4 +29,4 @@ def select_features(train_data, test_data):
     train_data_selected = train_data[train_cols]
     test_data_selected = test_data[test_cols]
 
-    return train_data_selected, test_data_selected, train_cols
+    return train_data_selected, test_data_selected
