@@ -2,6 +2,7 @@ from data.feature_engineering import find_nearest_haversine_distance
 from data.load_dataset import load_dataset
 from model.inference import save_csv
 from model.feature_select import select_features
+from model.data_split import split_features_and_target
 import argparse
 import os
 import pandas as pd
@@ -45,14 +46,13 @@ if __name__ == "__main__":
     test_data["log_park_distance"] = np.log1p(test_data["nearest_park_distance"])
     test_data["log_subway_distance"] = np.log1p(test_data["nearest_subway_distance"])
     
-    # 3. Feature Select
+    # Feature Select
     train_data, test_data = select_features(train_data, test_data)
     
-    # 데이터 분리
-    X = train_data.drop(columns=["deposit", "log_deposit"], inplace=False)
-    y = train_data[["deposit", "log_deposit"]]
+    # train_data split
+    X ,y = split_features_and_target(train_data)
     
-    # 4. 모델 학습 및 평가(모듈화 필요)
+    # Model train and evaulate
     best_params = {'n_estimators': 249, 'learning_rate': 0.1647758714498898, 'max_depth': 12, 'subsample': 0.9996749158433582}
     kfold = KFold(n_splits=5, shuffle=True, random_state=42)
     mae = []
@@ -67,6 +67,6 @@ if __name__ == "__main__":
 
     print(f"{np.mean(mae):.4f}")
     
-    # 5. 테스트 데이터에 대한 예측 및 제출 파일 생성
+    # 테스트 데이터에 대한 예측 및 제출 파일 생성
     save_csv(best_model, test_data, sample_submission)
     
