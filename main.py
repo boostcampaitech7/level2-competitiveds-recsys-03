@@ -3,6 +3,7 @@ from data.load_dataset import load_dataset
 from model.inference import save_csv
 from model.feature_select import select_features
 from model.data_split import split_features_and_target
+from model.log_transformation import apply_log_transformation
 import argparse
 import os
 import pandas as pd
@@ -35,17 +36,9 @@ if __name__ == "__main__":
     # built_year > 2024 행 삭제
     train_data = train_data[train_data["built_year"] < 2024]
     train_data.reset_index(drop=True, inplace=True)
-  
+    
     # log 변환
-    train_data["log_deposit"] = np.log1p(train_data["deposit"])
-    train_data["log_area_m2"] = np.log1p(train_data["area_m2"])
-    train_data["log_school_distance"] = np.log1p(train_data["nearest_school_distance"])
-    train_data["log_park_distance"] = np.log1p(train_data["nearest_park_distance"])
-    train_data["log_subway_distance"] = np.log1p(train_data["nearest_subway_distance"])
-    test_data["log_area_m2"] = np.log1p(test_data["area_m2"])
-    test_data["log_school_distance"] = np.log1p(test_data["nearest_school_distance"])
-    test_data["log_park_distance"] = np.log1p(test_data["nearest_park_distance"])
-    test_data["log_subway_distance"] = np.log1p(test_data["nearest_subway_distance"])
+    train_data, test_data = apply_log_transformation(train_data, test_data)
     
     # Feature Select
     train_data, test_data = select_features(train_data, test_data)
