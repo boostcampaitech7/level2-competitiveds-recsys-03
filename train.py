@@ -13,7 +13,8 @@ import matplotlib.pyplot as plt
 
 # 메인 실행 코드
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Model Training")
+    parser = argparse.ArgumentParser(prog = "수도권 아파트 전세 예측", description="사용법 python train.py --model 모델명(소문자)")
+    parser.add_argument("--model", type=str, choices=["xgboost", "lightgbm", "catboost", "ensemble"], default="xgboost", help="Select the model to train")
     args = parser.parse_args()
     # 1. 데이터 로드
     train_data, test_data, sample_submission = load_dataset()
@@ -28,10 +29,9 @@ if __name__ == "__main__":
     ]
     train_data.drop(small_groups.index, axis=0, inplace=True)
     # built_year > 2024 행 삭제
-    print("before train :", train_data.shape)
     train_data = train_data[train_data["built_year"] < 2024]
     train_data.reset_index(drop=True, inplace=True)
-    print("after train :", train_data.shape)
+  
     # log 변환
     train_data["log_deposit"] = np.log1p(train_data["deposit"])
     train_data["log_area_m2"] = np.log1p(train_data["area_m2"])
