@@ -23,7 +23,7 @@ def merge_dataset(
     Returns:
         Union[pd.DataFrame, pd.DataFrame]: 병합된 학습(훈련) 데이터프레임, 병합된 테스트 데이터프레임 
     """
-    # 금리: 계약 연월 기준으로 interest_data를 train_data로 병합
+    ### 금리: 계약 연월 기준으로 interest_data를 train_data로 병합 ###
     train_data: pd.DataFrame = pd.merge(train_data, interest_data, left_on="contract_year_month", right_on="year_month", how="left")
     train_data: pd.DataFrame = train_data.drop(columns=["year_month"])
     
@@ -31,7 +31,7 @@ def merge_dataset(
     test_data: pd.DataFrame = test_data.drop(columns=["year_month"])
 
     
-    # 최단거리 변수: find_nearest_haversine_distance 활용
+    ### 최단거리 변수: find_nearest_haversine_distance 활용 ###
     # train_data에서 위도, 경도 중복 행을 제외하고 추출
     unique_loc_train: pd.DataFrame = train_data[["latitude", "longitude"]].drop_duplicates().reset_index(drop=True)
     unique_loc_test: pd.DataFrame = test_data[["latitude", "longitude"]].drop_duplicates().reset_index(drop=True)
@@ -108,8 +108,8 @@ def merge_dataset(
         inplace=True
     )
 
-
-    # subway_data, school_data, park_data에서 각각 위도와 경도로 그룹화하여 개수 세기
+    
+    ### subway_data, school_data, park_data에서 각각 위도와 경도로 그룹화하여 개수 세기 ###
     # 개수를 센 데이터를 subway_count, school_count, park_count로 반환
     subway_count: pd.DataFrame = subway_data.groupby(["latitude", "longitude"]).size().reset_index(name='nearest_subway_num')
     school_count: pd.DataFrame = school_data.groupby(["latitude", "longitude"]).size().reset_index(name='nearest_school_num')
