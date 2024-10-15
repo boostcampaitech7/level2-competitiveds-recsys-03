@@ -11,6 +11,7 @@ import pandas as pd
 import numpy as np
 from sklearn.model_selection import train_test_split, KFold, cross_val_score
 import optuna
+import wandb
 import xgboost as xgb
 from sklearn.metrics import mean_absolute_error
 import seaborn as sns
@@ -21,7 +22,23 @@ from model.model_train import cv_train, set_model
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(prog = "수도권 아파트 전세 예측", description="사용법 python train.py --model 모델명(소문자)")
     parser.add_argument("--model", type=str, choices=["xgboost", "lightgbm", "catboost", "ensemble"], default="xgboost", help="Select the model to train")
+    parser.add_argument("--project", type=str, default="no_name", help="Input the project name")
+    parser.add_argument("--run", type=str, default="no_name", help="Input the run name")
     args = parser.parse_args()
+
+    # 0. WandB 초기화
+    wandb.init(
+        settings=wandb.Settings(start_method="thread"),
+        dir=None,  # 로컬에 로그 저장하지 않음
+        entity="remember-us", # team name,
+        project=args.project, # project name
+        name=args.run, # run name
+        config={
+            "random_state": 42,
+            "device": "cuda"
+        } # common setting
+    )
+
     # 1. 데이터 로드
     # 기존 데이터 불러오기
     train_data, test_data, sample_submission, interest_data, subway_data, school_data, park_data = load_dataset()
@@ -46,7 +63,7 @@ if __name__ == "__main__":
     train_data, test_data = apply_log_transformation(train_data, test_data)
     
     # Feature Select
-    train_data, test_data = select_features(train_data, test_data)
+    train_data, test_data, train_cols = select_features(train_data, test_data)
     
     # train_data split
     X, y = split_features_and_target(train_data)
@@ -58,6 +75,17 @@ if __name__ == "__main__":
 
     best_model = best_model.train(X, y["log_deposit"])
     
+    # WandB log and finish
+    wandb.log({
+        "features": train_cols,
+        "model": args.model,
+        "params": best_params,
+        "valid MAE": mae
+    })
+    wandb.finish()
+    
     # 테스트 데이터에 대한 예측 및 제출 파일 생성
     save_csv(best_model, test_data, sample_submission)
+
+    print(f"🧼 [{args.project} - {args.run}] Completed 🧼")
     
