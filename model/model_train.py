@@ -6,7 +6,7 @@ from model.TreeModel import XGBoost, LightGBM, CatBoost
 import optuna
 RANDOM_SEED = 42
 
-def set_model(model_name: str, train_type: str, **params):
+def set_model(model_name: str, **params):
     match model_name:
         case "xgboost":
             model = XGBoost(**params)
@@ -16,7 +16,18 @@ def set_model(model_name: str, train_type: str, **params):
             model = CatBoost(**params)
     return model
 
-def cv_train(model, X, y, verbose: bool = True):
+def cv_train(model, X: pd.DataFrame, y: pd.DataFrame, verbose: bool = True) -> float:
+    """K-Fold를 이용하여 Cross Validation을 수행하는 함수입니다.
+
+    Args:
+        model: 수행하려는 모델
+        X (pd.DataFrame): 독립 변수
+        y (pd.DataFrame): 예측 변수. deposit과 log_deposit 열로 나뉨.
+        verbose (bool, optional): Fold별 진행상황을 출력할지 여부. Defaults to True.
+
+    Returns:
+        float: 평균 MAE
+    """
     cv = 5
     kfold = KFold(n_splits=cv, shuffle=True, random_state=42)
 
@@ -42,7 +53,7 @@ def cv_train(model, X, y, verbose: bool = True):
     
     return mae
 
-def optuna_train(model_name, X, y):
+def optuna_train(model_name: str, X: pd.DataFrame, y: pd.DataFrame) -> tuple[dict, float]:
     def objective(trial):
         match model_name:
             case "xgboost":
@@ -71,21 +82,18 @@ def optuna_train(model_name, X, y):
             }
             case "catboost":
                 params = {
-                    "iterations": trial.suggest_int("iterations", 100, 1000),
-                    "learning_rate": trial.suggest_loguniform("learning_rate", 0.01, 0.3),
-                    "depth": trial.suggest_int("depth", 5, 12),
+                    "iterations": trial.suggest_int("iterations", 50, 500),
+                    "learning_rate": trial.suggest_float("learning_rate", 0.01, 0.3),
+                    "depth": trial.suggest_int("depth", 3, 10),
                     "l2_leaf_reg": trial.suggest_int("l2_leaf_reg", 1, 10),
-                    "bagging_temperature": trial.suggest_loguniform("bagging_temperature", 0.01, 1),
-                    "border_count": trial.suggest_int("border_count", 32, 255),
-                    "cat_features": ["contract_year",
-                                    #  "contract_month",
-                                    #  "contract_day",
-                                    "contract_type"],
+                    # "bagging_temperature": trial.suggest_loguniform("bagging_temperature", 0.01, 1),
+                    # "border_count": trial.suggest_int("border_count", 32, 255),
+                    "cat_features": ["contract_day"],
                     "task_type": "GPU",
-                    "devices": "0",
+                    "devices": "cuda",
                     "verbose": 0
                 }
-        model = set_model(model_name, train_type="regression", **params)
+        model = set_model(model_name, **params)
         return cv_train(model, X, y, verbose=False)
     
     sampler = optuna.samplers.TPESampler(seed=42)

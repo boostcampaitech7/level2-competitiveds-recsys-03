@@ -80,10 +80,10 @@ if __name__ == "__main__":
             'subsample': 0.9996749158433582
         }
 
-        best_model = set_model(args.model, train_type="regression", **best_params)
+        best_model = set_model(args.model, **best_params)
         mae = cv_train(best_model, X, y)
 
-    best_model = set_model(args.model, train_type="regression", **best_params)
+    best_model = set_model(args.model, **best_params)
     best_model = best_model.train(X, y["log_deposit"])
 
     # WandB log and finish
