@@ -1,4 +1,3 @@
-from data.feature_engineering import find_nearest_haversine_distance
 from data.load_dataset import load_dataset
 from data.merge_dataset import merge_dataset
 from model.inference import save_csv
@@ -8,15 +7,7 @@ from model.log_transformation import apply_log_transformation
 from model.model_train import cv_train, set_model, optuna_train
 import argparse
 import os
-import pandas as pd
-import numpy as np
-from sklearn.model_selection import train_test_split, KFold, cross_val_score
-import optuna
 import wandb
-import xgboost as xgb
-from sklearn.metrics import mean_absolute_error
-import seaborn as sns
-import matplotlib.pyplot as plt
 
 # 메인 실행 코드
 if __name__ == "__main__":
