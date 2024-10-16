@@ -23,6 +23,17 @@ class XGBoost:
         return self.model
     
     def predict(self, X_valid: pd.DataFrame):
+        """fit된 모델을 기반으로 예측값을 출력하는 함수입니다.
+
+        Args:
+            X_valid (pd.DataFrame): 검증 데이터셋
+
+        Raises:
+            ValueError: fit을 하지 않고 해당 함수를 실행했을 때 발생
+
+        Returns:
+            np.ndarray: 예측 결과
+        """
         if self.model == None:
             raise ValueError("Model is not trained.")
         return self.model.predict(X_valid)
@@ -48,6 +59,17 @@ class LightGBM:
         return self.model
     
     def predict(self, X_valid: pd.DataFrame):
+        """fit된 모델을 기반으로 예측값을 출력하는 함수입니다.
+
+        Args:
+            X_valid (pd.DataFrame): 검증 데이터셋
+
+        Raises:
+            ValueError: fit을 하지 않고 해당 함수를 실행했을 때 발생
+
+        Returns:
+            np.ndarray: 예측 결과
+        """
         if self.model == None:
             raise ValueError("Model is not trained.")
         return self.model.predict(X_valid)
@@ -82,7 +104,7 @@ class CatBoost:
             ValueError: fit을 하지 않고 해당 함수를 실행했을 때 발생
 
         Returns:
-            _type_: 예측된 데이터셋
+            np.ndarray: 예측 결과
         """
         if self.model == None:
             raise ValueError("Model is not trained.")

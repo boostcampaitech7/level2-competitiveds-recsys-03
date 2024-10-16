@@ -7,6 +7,15 @@ import optuna
 RANDOM_SEED = 42
 
 def set_model(model_name: str, **params):
+    """주어진 모델 이름에 따라 모델을 생성하고 반환하는 함수입니다.
+
+    Args:
+        model_name (str): 생성하려는 모델 이름
+        **params (dict): 모델 생성 시 사용할 하이퍼파라미터
+
+    Returns:
+        model (object): 생성된 모델 객체
+    """
     match model_name:
         case "xgboost":
             model = XGBoost(**params)
@@ -54,6 +63,18 @@ def cv_train(model, X: pd.DataFrame, y: pd.DataFrame, verbose: bool = True) -> f
     return mae
 
 def optuna_train(model_name: str, X: pd.DataFrame, y: pd.DataFrame) -> tuple[dict, float]:
+    """Optuna를 사용하여 주어진 모델의 하이퍼파라미터를 최적하는 함수
+
+    Args:
+        model_name (str): 최적화할 모델의 이름
+        X (pd.DataFrame): 독립 변수
+        y (pd.DataFrame): 예측 변수
+
+    Returns:
+        tuple[dict, float]:
+            - dict: 최적의 하이퍼파라미터
+            - float: 최적의 하이퍼파라미터에 대한 성능 지표(MAE)
+    """
     def objective(trial):
         match model_name:
             case "xgboost":

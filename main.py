@@ -11,6 +11,9 @@ import wandb
 
 # 메인 실행 코드
 if __name__ == "__main__":
+
+    ### 0. Argument Parsing
+
     parser = argparse.ArgumentParser(prog = "수도권 아파트 전세 예측", description="사용법 python train.py --model 모델명(소문자)")
     parser.add_argument("--model", type=str, choices=["xgboost", "lightgbm", "catboost", "ensemble"], default="xgboost", help="Select the model to train")
     parser.add_argument("--optuna", type=str, choices=["on", "off"], default="off", help="Select Optuna option")
@@ -18,7 +21,8 @@ if __name__ == "__main__":
     parser.add_argument("--run", type=str, default="no_name", help="Input the run name")
     args = parser.parse_args()
 
-    # 0. WandB 초기화
+    ### 1. WandB Initialization
+
     wandb.init(
         settings=wandb.Settings(start_method="thread"),
         dir=None,  # 로컬에 로그 저장하지 않음
@@ -30,13 +34,15 @@ if __name__ == "__main__":
         } # common setting
     )
 
-    # 1. 데이터 로드
+    ### 2. Data Load
+
     # 기존 데이터 불러오기
     train_data, test_data, sample_submission, interest_data, subway_data, school_data, park_data = load_dataset()
     # 기존 데이터에 새로운 feature들을 병합한 데이터프레임 불러오기
     train_data, test_data = merge_dataset(train_data, test_data, interest_data, subway_data, school_data, park_data)
     
-    # 2. 데이터 전처리
+    ### 3. Data Preprocessing
+
     # 위치 중복도 낮은 행 삭제
     groups = train_data.groupby(["latitude", "longitude"])["index"].count()
     conditioned_groups_index = groups[(groups >= 2) & (groups <= 5)].index # 이 범위를 파라미터로 조정하는걸로
@@ -50,16 +56,18 @@ if __name__ == "__main__":
     train_data = train_data[train_data["built_year"] < 2024]
     train_data.reset_index(drop=True, inplace=True)
     
+    ### 4. Feature Engineering
+
     # log 변환
     train_data, test_data = apply_log_transformation(train_data, test_data)
-    
+
     # Feature Select
     train_data, test_data = select_features(train_data, test_data)
     
     # train_data split
     X, y = split_features_and_target(train_data)
     
-    # Model train and evaulate
+    ### 5. Model Train and Evaulate
     
     if args.optuna == "on":
         best_params, mae = optuna_train(args.model, X, y)
@@ -77,7 +85,8 @@ if __name__ == "__main__":
     best_model = set_model(args.model, **best_params)
     best_model = best_model.train(X, y["log_deposit"])
 
-    # WandB log and finish
+    ### 6. WandB Log and Finish
+
     wandb.log({
         "features": list(train_data.columns),
         "model": args.model,
@@ -86,7 +95,8 @@ if __name__ == "__main__":
     })
     wandb.finish()
     
-    # 테스트 데이터에 대한 예측 및 제출 파일 생성
+    ### 7. Inference
+
     save_csv(best_model, test_data, sample_submission)
 
     print(f"🧼 [{args.project} - {args.run}] Completed 🧼")
