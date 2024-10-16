@@ -24,7 +24,7 @@ class LightGBM:
         self.random_seed = random_seed
     
     def train(self, X_train, y_train, X_valid=None, y_valid=None):
-        self.model = LGBMRegressor(**self.params, method="hist", device="cuda", random_state=self.random_seed)
+        self.model = LGBMRegressor(**self.params, method="hist", device="cpu", random_state=self.random_seed)
         self.model.fit(X_train, y_train)
         return self.model
     

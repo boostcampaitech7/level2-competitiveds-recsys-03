@@ -66,24 +66,19 @@ def optuna_train(model_name: str, X: pd.DataFrame, y: pd.DataFrame) -> tuple[dic
                 }
             case "lightgbm":
                 params = {
-                "verbose" : -1,
-                "num_leaves" : trial.suggest_int("num_leaves", 20, 150),
-                "learning_rate" : trial.suggest_loguniform("learning_rate", 0.01, 0.3),
-                "n_estimators": trial.suggest_int("n_estimators", 50, 300),
-                "max_depth" : trial.suggest_int("max_depth", 5, 12), # 과적합 방지
-                "subsample" : trial.suggest_uniform("subsample", 0.5, 1.0), # 데이터 샘플링 비율, 과적합 방지
-                # # 정규화 파라미터 범위 조정
-                # "reg_alpha" : trial.suggest_loguniform("reg_alpha", 1e-3, 1.0), 
-                # "reg_lambda" : trial.suggest_loguniform("reg_lambda", 1e-3, 1.0),
-                "random_state" : 42,
-                #"force_col_wise": True,
-                #"device" : "gpu",
-                "objective": "regression_l1" 
+                    "verbose": -1,
+                    "n_estimators": trial.suggest_int("n_estimators", 50, 300),
+                    "learning_rate": trial.suggest_float("learning_rate", 0.01, 0.3, log=True),
+                    "max_depth": trial.suggest_int("max_depth", 5, 12),
+                    "subsample": trial.suggest_float("subsample", 0.5, 1.0),
+                    "num_leaves": trial.suggest_int("num_leaves", 20, 150),
+                    "objective": "regression_l1"
             }
             case "catboost":
                 params = {
-                    "iterations": trial.suggest_int("iterations", 50, 500),
+                    "verbose": 0,
                     "learning_rate": trial.suggest_float("learning_rate", 0.01, 0.3),
+                    "iterations": trial.suggest_int("iterations", 50, 500),
                     "depth": trial.suggest_int("depth", 3, 10),
                     "l2_leaf_reg": trial.suggest_int("l2_leaf_reg", 1, 10),
                     # "bagging_temperature": trial.suggest_loguniform("bagging_temperature", 0.01, 1),
@@ -91,7 +86,6 @@ def optuna_train(model_name: str, X: pd.DataFrame, y: pd.DataFrame) -> tuple[dic
                     "cat_features": ["contract_day"],
                     "task_type": "GPU",
                     "devices": "cuda",
-                    "verbose": 0
                 }
         model = set_model(model_name, **params)
         return cv_train(model, X, y, verbose=False)
