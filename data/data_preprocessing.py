@@ -46,16 +46,16 @@ def delete_low_density(
     
     # 조건에 해당하는 데이터프레임 저장
     if drop == True:
-        result_df = train_data[
-            ~ (train_data["latitude"].isin(drop_index.get_level_values(0))
-            & train_data["longitude"].isin(drop_index.get_level_values(1)))
+        result_df = data[
+            ~ (data["latitude"].isin(drop_index.get_level_values(0))
+            & data["longitude"].isin(drop_index.get_level_values(1)))
         ].reset_index()
         result_df.drop(columns="level_0", inplace=True) # 필요없는 column 제거
         result_df["index"] = result_df.index # "index" column도 초기화
     else:
-        result_df = train_data[
-              (train_data["latitude"].isin(drop_index.get_level_values(0))
-            & train_data["longitude"].isin(drop_index.get_level_values(1)))
+        result_df = data[
+              (data["latitude"].isin(drop_index.get_level_values(0))
+            & data["longitude"].isin(drop_index.get_level_values(1)))
         ].reset_index()
         result_df.drop(columns="level_0", inplace=True) # 필요없는 column 제거
         result_df["index"] = result_df.index # # "index" column도 초기화
