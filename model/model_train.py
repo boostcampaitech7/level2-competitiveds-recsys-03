@@ -83,7 +83,6 @@ def optuna_train(model_name: str, X: pd.DataFrame, y: pd.DataFrame) -> tuple[dic
                     "learning_rate": trial.suggest_float("learning_rate", 0.01, 0.2),
                     "max_depth": trial.suggest_int("max_depth", 5, 12),
                     "subsample": trial.suggest_float("subsample", 0.5, 1.0),
-                    "gamma": trial.suggest_float("gamma", 0, 5)
                 }
             case "lightgbm":
                 params = {
