@@ -1,8 +1,12 @@
 import pandas as pd
+from typing import Union
+from sklearn.experimental import enable_iterative_imputer
+from sklearn.impute import IterativeImputer, KNNImputer
 
 # 이상치 탐지 함수
 def outlier_detection(data: pd.Series) -> pd.Series:
-    """안 울타리(inner fence) 밖에 있는 데이터(이상치, outlier)를 반환하는 함수
+    """
+    안 울타리(inner fence) 밖에 있는 데이터(이상치, outlier)를 반환하는 함수
 
     Args:
         data (pd.Series): 이상치 탐지를 하고싶은 데이터의 column
@@ -24,7 +28,8 @@ def delete_low_density(
     upper: int,
     drop: bool = True
 ) -> pd.DataFrame:
-    """위치 중복도가 선택할 구간에 포함되면 이에 해당하는 데이터를 반환하거나 또는 해당하는 데이터를 제거하는 함수
+    """
+    위치 중복도가 선택할 구간에 포함되면 이에 해당하는 데이터를 반환하거나 또는 해당하는 데이터를 제거하는 함수
 
     Args:
         data (pd.DataFrame): 위도, 경도를 column으로 갖는 데이터프레임
@@ -56,3 +61,88 @@ def delete_low_density(
         result_df["index"] = result_df.index # # "index" column도 초기화
 
     return result_df
+
+
+# 결측치 처리 클래스
+class MissingValueImputer:
+
+    # 평균 보간 함수
+    def mean_imputer(self, df: Union[pd.DataFrame, pd.Series]) -> Union[pd.DataFrame, pd.Series]:
+        """
+        Pandas의 내장함수인 .mean()을 사용하여 결측치를 처리 후 반환하는 함수
+
+        Args:
+            df (Union[pd.DataFrame, pd.Series]): 결측치가 있는 DataFrame 및 column
+
+        Returns:
+            Union[pd.DataFrame, pd.Series]: imputer한 DataFrame 또는 Series 반환
+        """
+
+        if isinstance(df, pd.DataFrame):
+            numeric_cols = df.select_dtypes(include=["number"]).columns.tolist()
+            df[numeric_cols] = df[numeric_cols].fillna(df[numeric_cols].mean())
+            return df 
+               
+        elif isinstance(df, pd.Series):
+            return df.fillna(df.mean())
+
+
+    # 중앙값 보간 함수
+    def median_imputer(self, df: Union[pd.DataFrame, pd.Series]) -> Union[pd.DataFrame, pd.Series]:
+        """
+        Pandas의 내장함수인 .median()을 사용하여 결측치를 처리 후 반환하는 함수
+
+        Args:
+            df (Union[pd.DataFrame, pd.Series]): 결측치가 있는 DataFrame 및 column
+
+        Returns:
+            Union[pd.DataFrame, pd.Series]: imputer한 DataFrame 또는 Series 반환
+        """
+
+        if isinstance(df, pd.DataFrame):
+            numeric_cols = df.select_dtypes(include=["number"]).columns.tolist()
+            df[numeric_cols] = df[numeric_cols].fillna(df[numeric_cols].median())
+            return df
+        
+        elif isinstance(df, pd.Series):
+            return df.fillna(df.median())
+
+
+    # Iterative방법을 사용한 보간 함수
+    def iterative_imputer(self, df: pd.DataFrame) -> pd.DataFrame:
+        """
+        scikit-learn의 IterativeImputer에서 default값을 사용해서 결측치를 처리 후 반환하는 함수
+
+        Args:
+            df (pd.DataFrame): 결측치가 있는 DataFrame
+
+        Returns:
+            pd.DataFrame: imputer한 DataFrame 반환
+        """
+
+        numeric_cols = df.select_dtypes(include=["number"]).columns.tolist()
+        imputer = IterativeImputer()
+        df_imputed_array = imputer.fit_transform(df[numeric_cols])
+        imputed_df = pd.DataFrame(df_imputed_array, columns=numeric_cols)
+        df[numeric_cols] = imputed_df.values
+        return df
+
+
+    # knn방법을 사용한 보간 함수
+    def knn_imputer(self, df: pd.DataFrame) -> pd.DataFrame:
+        """
+        scikit-learn의 KNNImputer에서 default값을 사용하여 결측치를 처리 후 반환하는 함수
+
+        Args:
+            df (pd.DataFrame): 결측치가 있는 DataFrame
+
+        Returns:
+            pd.DataFrame: imputer한 DataFrame 반환
+        """
+
+        numeric_cols = df.select_dtypes(include=["number"]).columns.tolist()
+        imputer = KNNImputer()
+        df_imputed_array = imputer.fit_transform(df[numeric_cols])
+        imputed_df = pd.DataFrame(df_imputed_array, columns=numeric_cols)
+        df[numeric_cols] = imputed_df.values
+        return df
