@@ -61,11 +61,11 @@ if __name__ == "__main__":
     # log 변환
     train_data, test_data = apply_log_transformation(train_data, test_data)
 
-    # Feature Select
-    train_data, test_data = select_features(train_data, test_data)
-    
     # train_data split
     X, y = split_features_and_target(train_data)
+    
+    # Feature Select
+    X, test_data = select_features(X, y, test_data)
     
     ### 5. Model Train and Evaulate
     
@@ -88,7 +88,7 @@ if __name__ == "__main__":
     ### 6. WandB Log and Finish
 
     wandb.log({
-        "features": list(train_data.columns),
+        "features": list(X.columns),
         "model": args.model,
         "params": best_params,
         "valid MAE": mae
