@@ -1,6 +1,6 @@
 from typing import Union
 import pandas as pd
-from data.feature_engineering import find_nearest_haversine_distance
+from data.feature_engineering import find_nearest_haversine_distance, find_places_within_radius
 
 def merge_dataset(
     train_data: pd.DataFrame, 
@@ -109,7 +109,7 @@ def merge_dataset(
     )
 
     
-    ### subway_data, school_data, park_data에서 각각 위도와 경도로 그룹화하여 개수 세기 ###
+    ### 최단거리 지하철, 학교, 공원 개수 변수: subway_data, school_data, park_data에서 각각 위도와 경도로 그룹화하여 개수 세기 ###
     # 개수를 센 데이터를 subway_count, school_count, park_count로 반환
     subway_count: pd.DataFrame = subway_data.groupby(["latitude", "longitude"]).size().reset_index(name='nearest_subway_num')
     school_count: pd.DataFrame = school_data.groupby(["latitude", "longitude"]).size().reset_index(name='nearest_school_num')
@@ -180,5 +180,49 @@ def merge_dataset(
         },
         inplace=True
     )
+
+
+    ### 특정 반경 내 지하철, 학교, 공원 수 변수: find_places_within_radius 함수 활용 ###
+    # train_data, test_data에서 위도, 경도 중복 행을 제외하고 추출
+    unique_loc_train: pd.DataFrame = train_data[["latitude", "longitude"]].drop_duplicates().reset_index(drop=True)
+    unique_loc_test: pd.DataFrame = test_data[["latitude", "longitude"]].drop_duplicates().reset_index(drop=True)
+
+    unique_loc_subway: pd.DataFrame = subway_data[["latitude", "longitude"]].drop_duplicates().reset_index(drop=True) # 같은 역이 다른 노선을 지나면 중복해서 카운트하므로 제거
+    unique_loc_school: pd.DataFrame = school_data[["latitude", "longitude"]].drop_duplicates().reset_index(drop=True)
+    unique_loc_park: pd.DataFrame = park_data[["latitude", "longitude"]].drop_duplicates().reset_index(drop=True)
+
+
+    # train_data에 700m 반경 이내 지하철 역 개수 정보 추가
+    merged_df: pd.DataFrame = find_places_within_radius(unique_loc_train, unique_loc_subway, 700)
+    train_data: pd.DataFrame = pd.merge(train_data, merged_df, on=["latitude", "longitude"], how="left")
+    train_data.rename(columns={"num_of_places_within_radius": "num_of_subways_within_radius"}, inplace=True)
+
+    # test_data에 700m 반경 이내 지하철 역 개수 정보 추가
+    merged_df: pd.DataFrame = find_places_within_radius(unique_loc_test, unique_loc_subway, 700)
+    test_data: pd.DataFrame = pd.merge(test_data, merged_df, on=["latitude", "longitude"], how="left")
+    test_data.rename(columns={"num_of_places_within_radius": "num_of_subways_within_radius"}, inplace=True)
+
+
+    # train_data에 700m 반경 이내 학교 개수 정보 추가
+    merged_df: pd.DataFrame = find_places_within_radius(unique_loc_train, unique_loc_school, 700)
+    train_data: pd.DataFrame = pd.merge(train_data, merged_df, on=["latitude", "longitude"], how="left")
+    train_data.rename(columns={"num_of_places_within_radius": "num_of_schools_within_radius"}, inplace=True)
+
+    # test_data에 700m 반경 이내 학교 개수 정보 추가
+    merged_df: pd.DataFrame = find_places_within_radius(unique_loc_test, unique_loc_school, 700)
+    test_data: pd.DataFrame = pd.merge(test_data, merged_df, on=["latitude", "longitude"], how="left")
+    test_data.rename(columns={"num_of_places_within_radius": "num_of_schools_within_radius"}, inplace=True)
+
+
+    # train_data에 700m 반경 이내 공원 개수 정보 추가
+    merged_df: pd.DataFrame = find_places_within_radius(unique_loc_train, unique_loc_park, 700)
+    train_data: pd.DataFrame = pd.merge(train_data, merged_df, on=["latitude", "longitude"], how="left")
+    train_data.rename(columns={"num_of_places_within_radius": "num_of_parks_within_radius"}, inplace=True)
+
+
+    # test_data에 700m 반경 이내 공원 개수 정보 추가
+    merged_df: pd.DataFrame = find_places_within_radius(unique_loc_test, unique_loc_park, 700)
+    test_data: pd.DataFrame = pd.merge(test_data, merged_df, on=["latitude", "longitude"], how="left")
+    test_data.rename(columns={"num_of_places_within_radius": "num_of_parks_within_radius"}, inplace=True)
 
     return train_data, test_data
