@@ -1,6 +1,10 @@
 import pandas as pd
 import numpy as np
 from sklearn.neighbors import BallTree
+import matplotlib.pyplot as plt
+from sklearn.cluster import KMeans, DBSCAN
+from sklearn.mixture import GaussianMixture
+from sklearn.metrics import silhouette_score
 
 def find_nearest_haversine_distance(
     data: pd.DataFrame, 
@@ -36,3 +40,109 @@ def find_nearest_haversine_distance(
     })
 
     return result_df
+
+
+class ClusteringModel:
+    def __init__(self, data):
+        self.data = data
+
+    ### K-means 최적의 클러스터 수 찾는 메서드 ###
+    def find_kmeans_n_clusters(self, max_clusters=20):
+        wcss = []
+        for i in range(1, max_clusters + 1):
+            kmeans = KMeans(n_clusters=i, init='k-means++', random_state=42)
+            kmeans.fit(self.data)
+            wcss.append(kmeans.inertia_)
+
+        plt.plot(range(1, max_clusters + 1), wcss)
+        plt.title('Elbow Method')
+        plt.xlabel('Number of Clusters')
+        plt.ylabel('WCSS')
+        plt.show()
+
+        # 최적의 클러스터 수 선택
+        optimal_clusters = int(input("적절한 n_clusters를 선택해주세요 :"))
+        print(f'KMeans Optimal_clusters: {optimal_clusters}')
+        return optimal_clusters
+
+    ### K-means 클러스터링 수행 메서드 ###
+    def kmeans_clustering(self, n_clusters, train_data, test_data, feature_columns, label_column="region"):
+        kmeans = KMeans(n_clusters=n_clusters, init='k-means++', random_state=42)
+        kmeans.fit(self.data)
+
+        train_data[label_column] = kmeans.predict(train_data[feature_columns])
+        test_data[label_column] = kmeans.predict(test_data[feature_columns]) 
+
+        return kmeans
+
+    ### DBSCAN 최적의 클러스터 수 찾는 메서드 ###
+    def find_dbscan_n_clusters(self, min_samples=5):
+        best_eps = None
+        best_score = -1
+
+        eps_values = [0.01, 0.1, 0.2]
+        for eps in eps_values:
+            dbscan = DBSCAN(eps=eps, min_samples=min_samples)
+            labels = dbscan.fit_predict(self.data)
+
+            if len(set(labels)) > 1:  # clusters 2개 이상
+                score = silhouette_score(self.data, labels)
+                if score > best_score:
+                    best_score = score
+                    best_eps = eps
+
+        print(f'Best eps: {best_eps} with Silhouette Score: {best_score}')
+        return best_eps
+
+    ### DBSCAN 클러스터링 수행 메서드 ###
+    def dbscan_clustering(self, eps, train_data, test_data, feature_columns, label_column="region", min_samples=5):
+        dbscan = DBSCAN(eps=eps, min_samples=min_samples)
+        dbscan.fit(self.data)
+
+        
+        train_data[label_column] = dbscan.fit_predict(train_data[feature_columns])
+        test_data[label_column] = dbscan.fit_predict(test_data[feature_columns]) 
+
+
+        return dbscan
+
+    ### GMM 및 최적의 클러스터 수 찾는 메서드 ###
+    def find_gmm_n_clusters(self, max_clusters=20):
+        aic_scores = []
+        bic_scores = []
+
+        n_components_range = range(1, max_clusters + 1)
+
+        for n_components in n_components_range:
+            gmm = GaussianMixture(n_components=n_components, random_state=42)
+            gmm.fit(self.data)
+
+            # BIC, AIC값 저장
+            bic_scores.append(gmm.bic(self.data))
+            aic_scores.append(gmm.aic(self.data))
+
+        # BIC와 AIC 점수 시각화 (선택 사항)
+        plt.plot(n_components_range, bic_scores, label='BIC')
+        plt.plot(n_components_range, aic_scores, label='AIC')
+        plt.xlabel('Number of Components')
+        plt.ylabel('Scores')
+        plt.title('BIC and AIC Scores for GMM')
+        plt.legend()
+        plt.show()
+
+        # 최적의 클러스터 수 결정
+        optimal_n_clusters = n_components_range[np.argmin(bic_scores)] if min(bic_scores) < min(aic_scores) else n_components_range[np.argmin(aic_scores)]
+        print(f'Optimal_n_components: {optimal_n_clusters}')
+        
+        return optimal_n_clusters
+
+    ### GMM 클러스터링 수행 메서드 ###
+    def gmm_clustering(self, n_clusters, train_data, test_data, feature_columns, label_column="region"):
+        gmm = GaussianMixture(n_components=n_clusters, random_state=42)
+        gmm.fit(self.data)
+
+        train_data[label_column] = gmm.predict(train_data[feature_columns])
+        test_data[label_column] = gmm.predict(test_data[feature_columns]) 
+        
+        return gmm
+    
