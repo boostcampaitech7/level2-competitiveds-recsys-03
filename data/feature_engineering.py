@@ -1,30 +1,35 @@
 import pandas as pd
 import numpy as np
 from sklearn.neighbors import BallTree
+import matplotlib.pyplot as plt
+from sklearn.cluster import KMeans, DBSCAN
+from sklearn.mixture import GaussianMixture
+from sklearn.metrics import silhouette_score
 
 def find_nearest_haversine_distance(
-    train_data: pd.DataFrame, 
+    data: pd.DataFrame, 
     loc_data: pd.DataFrame
 ) -> pd.DataFrame:
     """건물과 지하철/학교/공원 사이의 최단 haversine 거리와 위치 정보를 반환하는 함수
 
     Args:
-        train_data (pd.DataFrame): 학습(훈련) 또는 테스트 데이터프레임
-        loc_data (pd.DataFrame): 위도, 경도를 column으로 갖는 데이터프레임
+        data (pd.DataFrame): 위도, 경도를 column으로 갖는 학습(훈련) 또는 테스트 데이터프레임
+        loc_data (pd.DataFrame): 거리를 재려고 하는 대상(학교, 지하철, 공원)의 위도, 경도를 column으로 갖는 데이터프레임
 
     Returns:
         pd.DataFrame: 최단거리, 최단거리에 해당하는 지점의 위도, 경도를 column으로 갖는 데이터프레임
     """
     # haversine 거리 계산을 위해 degree -> radian 값으로 변환
-    train_coords = np.radians(train_data[["latitude", "longitude"]].values)
+    data_coords = np.radians(data[["latitude", "longitude"]].values)
     loc_coords = np.radians(loc_data[["latitude", "longitude"]].values)
-    
+    earth_radius_meter = 6371000 # 지구 반경 미터로 저장
+
     # Ball Tree 객체 생성 
     tree = BallTree(loc_coords, metric="haversine")
 
     # tree.query로 거리 계산
-    distances, indices = tree.query(train_coords, k=1) # 가까운 1 지점만 
-    distances_meter = distances * 6371000 # 단위를 meter로 변환
+    distances, indices = tree.query(data_coords, k=1) # 가까운 1 지점만 
+    distances_meter = distances * earth_radius_meter # 단위를 meter로 변환
     nearest_coords = loc_data[["latitude", "longitude"]].iloc[indices.flatten()].values # 가장 가까운 지점들의 좌표 저장
 
     # 최단거리, 최단거리에 해당하는 지점의 위도, 경도로 이루어진 데이터프레임 생성
@@ -35,3 +40,109 @@ def find_nearest_haversine_distance(
     })
 
     return result_df
+
+
+class ClusteringModel:
+    def __init__(self, data):
+        self.data = data
+
+    ### K-means 최적의 클러스터 수 찾는 메서드 ###
+    def find_kmeans_n_clusters(self, max_clusters=20):
+        wcss = []
+        for i in range(1, max_clusters + 1):
+            kmeans = KMeans(n_clusters=i, init='k-means++', random_state=42)
+            kmeans.fit(self.data)
+            wcss.append(kmeans.inertia_)
+
+        plt.plot(range(1, max_clusters + 1), wcss)
+        plt.title('Elbow Method')
+        plt.xlabel('Number of Clusters')
+        plt.ylabel('WCSS')
+        plt.show()
+
+        # 최적의 클러스터 수 선택
+        optimal_clusters = int(input("적절한 n_clusters를 선택해주세요 :"))
+        print(f'KMeans Optimal_clusters: {optimal_clusters}')
+        return optimal_clusters
+
+    ### K-means 클러스터링 수행 메서드 ###
+    def kmeans_clustering(self, n_clusters, train_data, test_data, feature_columns, label_column="region"):
+        kmeans = KMeans(n_clusters=n_clusters, init='k-means++', random_state=42)
+        kmeans.fit(self.data)
+
+        train_data[label_column] = kmeans.predict(train_data[feature_columns])
+        test_data[label_column] = kmeans.predict(test_data[feature_columns]) 
+
+        return kmeans
+
+    ### DBSCAN 최적의 클러스터 수 찾는 메서드 ###
+    def find_dbscan_n_clusters(self, min_samples=5):
+        best_eps = None
+        best_score = -1
+
+        eps_values = [0.01, 0.1, 0.2]
+        for eps in eps_values:
+            dbscan = DBSCAN(eps=eps, min_samples=min_samples)
+            labels = dbscan.fit_predict(self.data)
+
+            if len(set(labels)) > 1:  # clusters 2개 이상
+                score = silhouette_score(self.data, labels)
+                if score > best_score:
+                    best_score = score
+                    best_eps = eps
+
+        print(f'Best eps: {best_eps} with Silhouette Score: {best_score}')
+        return best_eps
+
+    ### DBSCAN 클러스터링 수행 메서드 ###
+    def dbscan_clustering(self, eps, train_data, test_data, feature_columns, label_column="region", min_samples=5):
+        dbscan = DBSCAN(eps=eps, min_samples=min_samples)
+        dbscan.fit(self.data)
+
+        
+        train_data[label_column] = dbscan.fit_predict(train_data[feature_columns])
+        test_data[label_column] = dbscan.fit_predict(test_data[feature_columns]) 
+
+
+        return dbscan
+
+    ### GMM 및 최적의 클러스터 수 찾는 메서드 ###
+    def find_gmm_n_clusters(self, max_clusters=20):
+        aic_scores = []
+        bic_scores = []
+
+        n_components_range = range(1, max_clusters + 1)
+
+        for n_components in n_components_range:
+            gmm = GaussianMixture(n_components=n_components, random_state=42)
+            gmm.fit(self.data)
+
+            # BIC, AIC값 저장
+            bic_scores.append(gmm.bic(self.data))
+            aic_scores.append(gmm.aic(self.data))
+
+        # BIC와 AIC 점수 시각화 (선택 사항)
+        plt.plot(n_components_range, bic_scores, label='BIC')
+        plt.plot(n_components_range, aic_scores, label='AIC')
+        plt.xlabel('Number of Components')
+        plt.ylabel('Scores')
+        plt.title('BIC and AIC Scores for GMM')
+        plt.legend()
+        plt.show()
+
+        # 최적의 클러스터 수 결정
+        optimal_n_clusters = n_components_range[np.argmin(bic_scores)] if min(bic_scores) < min(aic_scores) else n_components_range[np.argmin(aic_scores)]
+        print(f'Optimal_n_components: {optimal_n_clusters}')
+        
+        return optimal_n_clusters
+
+    ### GMM 클러스터링 수행 메서드 ###
+    def gmm_clustering(self, n_clusters, train_data, test_data, feature_columns, label_column="region"):
+        gmm = GaussianMixture(n_components=n_clusters, random_state=42)
+        gmm.fit(self.data)
+
+        train_data[label_column] = gmm.predict(train_data[feature_columns])
+        test_data[label_column] = gmm.predict(test_data[feature_columns]) 
+        
+        return gmm
+    
