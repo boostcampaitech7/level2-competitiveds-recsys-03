@@ -1,6 +1,6 @@
 from typing import Union
 import pandas as pd
-from data.feature_engineering import find_nearest_haversine_distance
+from data.feature_engineering import find_nearest_haversine_distance, find_places_within_radius
 
 def merge_dataset(
     train_data: pd.DataFrame, 
