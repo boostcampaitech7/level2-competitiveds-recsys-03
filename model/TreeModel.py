@@ -1,6 +1,8 @@
 from xgboost import XGBRegressor
 from lightgbm import LGBMRegressor
 from catboost import CatBoostRegressor
+from wandb.integration.xgboost import WandbCallback
+from wandb.integration.lightgbm import wandb_callback, log_summary
 import pandas as pd
 
 class XGBoost:
@@ -19,6 +21,8 @@ class XGBoost:
             Any: fit까지 완료된 모델 객체
         """
         self.model = XGBRegressor(**self.params, tree_method="hist", device="cuda", random_state=self.random_seed)
+        # Feature Importance
+        # self.model = XGBRegressor(**self.params, tree_method="hist", device="cuda", random_state=self.random_seed, callbacks=[WandbCallback(log_model=True)]) 
         self.model.fit(X_train, y_train)
         return self.model
     
@@ -56,6 +60,12 @@ class LightGBM:
         """
         self.model = LGBMRegressor(**self.params, method="hist", device="cpu", random_state=self.random_seed)
         self.model.fit(X_train, y_train)
+
+        # Feature Importance
+        # self.model.fit(X_train, y_train, callbacks=[wandb_callback()])
+        # booster = self.model.booster_
+        # log_summary(booster, save_model_checkpoint=True)
+
         return self.model
     
     def predict(self, X_valid: pd.DataFrame):
