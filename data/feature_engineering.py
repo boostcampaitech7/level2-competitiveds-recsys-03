@@ -10,7 +10,8 @@ def find_nearest_haversine_distance(
     data: pd.DataFrame, 
     loc_data: pd.DataFrame
 ) -> pd.DataFrame:
-    """건물과 지하철/학교/공원 사이의 최단 haversine 거리와 위치 정보를 반환하는 함수
+    """
+    건물과 지하철/학교/공원 사이의 최단 haversine 거리와 위치 정보를 반환하는 함수
 
     Args:
         data (pd.DataFrame): 위도, 경도를 column으로 갖는 학습(훈련) 또는 테스트 데이터프레임
@@ -22,7 +23,9 @@ def find_nearest_haversine_distance(
     # haversine 거리 계산을 위해 degree -> radian 값으로 변환
     data_coords = np.radians(data[["latitude", "longitude"]].values)
     loc_coords = np.radians(loc_data[["latitude", "longitude"]].values)
-    earth_radius_meter = 6371000 # 지구 반경 미터로 저장
+    
+    # 지구 반경 미터 단위로 설정
+    earth_radius_meter = 6371000
 
     # Ball Tree 객체 생성 
     tree = BallTree(loc_coords, metric="haversine")
@@ -37,6 +40,47 @@ def find_nearest_haversine_distance(
         "nearest_distance" : distances_meter.flatten(),
         "nearest_latitude" : nearest_coords[:, 0],
         "nearest_longitude" : nearest_coords[:, 1]
+    })
+
+    return result_df
+
+
+def find_places_within_radius(
+		data: pd.DataFrame,
+		loc_data: pd.DataFrame,
+		radius_meter: int
+) -> pd.DataFrame:
+    """
+    특정 반경 이내 공공장소의 개수와 위치 정보를 반환하는 함수
+
+    Args:
+        data (pd.DataFrame): 건물의 위도, 경도를 column으로 갖는 학습(훈련) 또는 테스트 데이터프레임
+        loc_data (pd.DataFrame): 공공장소의 위도, 경도를 column으로 갖는 데이터프레임
+        radius_meter (int): 탐색하려는 반경
+
+    Returns:
+        pd.DataFrame: 특정 반경 이내 공공장소 수와 반경의 중심(건물)의 위도, 경도를 column으로 갖는 데이터프레임
+    """
+    # degree -> radian 값으로 변환 for 삼각함수
+    data_coords = np.radians(data[["latitude", "longitude"]].values)
+    loc_coords = np.radians(loc_data[["latitude", "longitude"]].values)
+    
+    # 지구 반경 미터 단위로 설정
+    earth_radius_meter = 6371000
+
+    # Ball Tree 객체 생성
+    tree = BallTree(loc_coords, metric="haversine")
+    
+    # query_radius 메서드로 주어진 반경 이내의 공공장소 개수 탐색
+    places_within_radius = tree.query_radius(data_coords, r=radius_meter/earth_radius_meter, 
+                                             count_only=True
+    )
+
+    # 특정 반경 내 공공장소 수, 반경의 중심(위도, 경도)로 이루어진 데이터프레임 생성
+    result_df = pd.DataFrame({
+        "num_of_places_within_radius": places_within_radius,
+        "latitude": data["latitude"],
+        "longitude": data["longitude"]
     })
 
     return result_df
@@ -65,6 +109,7 @@ class ClusteringModel:
         print(f'KMeans Optimal_clusters: {optimal_clusters}')
         return optimal_clusters
 
+
     ### K-means 클러스터링 수행 메서드 ###
     def kmeans_clustering(self, n_clusters, train_data, test_data, feature_columns, label_column="region"):
         kmeans = KMeans(n_clusters=n_clusters, init='k-means++', random_state=42)
@@ -74,6 +119,7 @@ class ClusteringModel:
         test_data[label_column] = kmeans.predict(test_data[feature_columns]) 
 
         return kmeans
+
 
     ### DBSCAN 최적의 클러스터 수 찾는 메서드 ###
     def find_dbscan_n_clusters(self, min_samples=5):
@@ -94,6 +140,7 @@ class ClusteringModel:
         print(f'Best eps: {best_eps} with Silhouette Score: {best_score}')
         return best_eps
 
+
     ### DBSCAN 클러스터링 수행 메서드 ###
     def dbscan_clustering(self, eps, train_data, test_data, feature_columns, label_column="region", min_samples=5):
         dbscan = DBSCAN(eps=eps, min_samples=min_samples)
@@ -105,6 +152,7 @@ class ClusteringModel:
 
 
         return dbscan
+
 
     ### GMM 및 최적의 클러스터 수 찾는 메서드 ###
     def find_gmm_n_clusters(self, max_clusters=20):
@@ -136,6 +184,7 @@ class ClusteringModel:
         
         return optimal_n_clusters
 
+
     ### GMM 클러스터링 수행 메서드 ###
     def gmm_clustering(self, n_clusters, train_data, test_data, feature_columns, label_column="region"):
         gmm = GaussianMixture(n_components=n_clusters, random_state=42)
@@ -145,4 +194,3 @@ class ClusteringModel:
         test_data[label_column] = gmm.predict(test_data[feature_columns]) 
         
         return gmm
-    
