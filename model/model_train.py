@@ -4,6 +4,9 @@ from sklearn.metrics import mean_absolute_error
 from sklearn.model_selection import KFold
 from model.TreeModel import XGBoost, LightGBM, CatBoost
 import optuna
+import optuna.logging
+# Optuna의 기본 로그 출력을 비활성화
+optuna.logging.set_verbosity(optuna.logging.WARNING)
 RANDOM_SEED = 42
 
 def set_model(model_name: str, **params):
@@ -110,7 +113,19 @@ def optuna_train(model_name: str, X: pd.DataFrame, y: pd.DataFrame) -> tuple[dic
         model = set_model(model_name, **params)
         return cv_train(model, X, y, verbose=False)
     
+    # 콜백 함수 정의 (현재 trial 값과 최적 trial 값 출력)
+    def print_formatted_params(study, trial):
+        print(f"Trial {trial.number}", end=" ===> ")
+        print(f"Value: {trial.value:.4f}", end=", ")
+        
+        # 현재까지 최적의 trial 값 출력
+        if study.best_value is not None:
+            print(f"Best Value: {study.best_value:.4f}", end=" | ")
+        
+        formatted_params = {k: f"{v:.4f}" if isinstance(v, float) else v for k, v in trial.params.items()}
+        print(f"Trial {trial.number}: {formatted_params}")
+    
     sampler = optuna.samplers.TPESampler(seed=42)
     study = optuna.create_study(direction="minimize", sampler=sampler)
-    study.optimize(objective, n_trials=50)
+    study.optimize(objective, n_trials=50, callbacks=[print_formatted_params])
     return study.best_params, study.best_value

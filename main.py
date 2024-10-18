@@ -1,5 +1,6 @@
 from data.load_dataset import load_dataset
 from data.merge_dataset import merge_dataset
+from data.feature_engineering import ClusteringModel
 from model.inference import save_csv
 from model.feature_select import select_features
 from model.data_split import split_features_and_target
@@ -60,6 +61,25 @@ if __name__ == "__main__":
 
     # log 변환
     train_data, test_data = apply_log_transformation(train_data, test_data)
+
+    # clustering
+    feature_columns = [
+        "latitude",
+        "longitude",
+        "log_subway_distance",
+        "log_school_distance",
+        "log_park_distance",
+        "num_of_subways_within_radius",
+        "num_of_schools_within_radius",
+        "num_of_parks_within_radius",
+    ]
+    coords = train_data[feature_columns]
+    cm = ClusteringModel(data=coords)
+    n_clusters = 20
+    print("n_clusters:", n_clusters)
+    kmeans_model = cm.kmeans_clustering(n_clusters, train_data, test_data, feature_columns, "cluster")
+    train_data["cluster"] = kmeans_model.predict(train_data[feature_columns])
+    test_data["cluster"] = kmeans_model.predict(test_data[feature_columns])
 
     # train_data split
     X, y = split_features_and_target(train_data)

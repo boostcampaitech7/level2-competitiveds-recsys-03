@@ -26,7 +26,10 @@ def select_features(X, y, test_data):
         "log_park_distance",
         "contract_year_month",
         "contract_day",
-        #"num_of_subways_within_radius",
+        "num_of_subways_within_radius",
+        "num_of_schools_within_radius",
+        "num_of_parks_within_radius",
+        "cluster"
     ]
 
     # selected_cols = select_kbest(X[selected_cols], y, "log_deposit")
