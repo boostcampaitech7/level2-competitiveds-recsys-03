@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 from sklearn.cluster import KMeans, DBSCAN
 from sklearn.mixture import GaussianMixture
 from sklearn.metrics import silhouette_score
+from tqdm import tqdm
 
 def find_nearest_haversine_distance(
     data: pd.DataFrame, 
@@ -93,7 +94,7 @@ class ClusteringModel:
     ### K-means 최적의 클러스터 수 찾는 메서드 ###
     def find_kmeans_n_clusters(self, max_clusters=20):
         wcss = []
-        for i in range(1, max_clusters + 1):
+        for i in tqdm(range(1, max_clusters + 1), desc="Elbow Method 진행 중...⏳"):
             kmeans = KMeans(n_clusters=i, init='k-means++', random_state=42)
             kmeans.fit(self.data)
             wcss.append(kmeans.inertia_)
@@ -127,7 +128,8 @@ class ClusteringModel:
         best_score = -1
 
         eps_values = [0.01, 0.1, 0.2]
-        for eps in eps_values:
+
+        for eps in tqdm(eps_values, desc="Silhouette Score 계산 중...⏳"):
             dbscan = DBSCAN(eps=eps, min_samples=min_samples)
             labels = dbscan.fit_predict(self.data)
 
@@ -145,11 +147,9 @@ class ClusteringModel:
     def dbscan_clustering(self, eps, train_data, test_data, feature_columns, label_column="region", min_samples=5):
         dbscan = DBSCAN(eps=eps, min_samples=min_samples)
         dbscan.fit(self.data)
-
         
         train_data[label_column] = dbscan.fit_predict(train_data[feature_columns])
         test_data[label_column] = dbscan.fit_predict(test_data[feature_columns]) 
-
 
         return dbscan
 
@@ -161,7 +161,7 @@ class ClusteringModel:
 
         n_components_range = range(1, max_clusters + 1)
 
-        for n_components in n_components_range:
+        for n_components in tqdm(n_components_range, desc="BIC, AIC 계산 중...⏳"):
             gmm = GaussianMixture(n_components=n_components, random_state=42)
             gmm.fit(self.data)
 
