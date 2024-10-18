@@ -5,6 +5,7 @@ from model.feature_select import select_features
 from model.data_split import split_features_and_target
 from model.log_transformation import apply_log_transformation
 from model.model_train import cv_train, set_model, optuna_train
+from data.feature_engineering import ClusteringModel
 import argparse
 import os
 import wandb
@@ -58,6 +59,22 @@ if __name__ == "__main__":
     
     ### 4. Feature Engineering
 
+    #clustering
+    cluster_data = train_data[["latitude", "longitude"]]
+    clustering_model = ClusteringModel(cluster_data)
+    kmeans_model = clustering_model.kmeans_clustering(
+    n_clusters = 25,
+    train_data = train_data,
+    test_data = test_data,
+    feature_columns = ["latitude", "longitude"],
+    label_column = 'region'
+)
+    # region_mean 병합
+    region_mean = train_data.groupby('region')['deposit'].mean().reset_index()
+    region_mean.columns = ['region', 'region_mean']
+    train_data = train_data.merge(region_mean, on='region', how='left')
+    test_data = test_data.merge(region_mean, on='region', how='left')
+    
     # log 변환
     train_data, test_data = apply_log_transformation(train_data, test_data)
 
