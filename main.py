@@ -41,6 +41,7 @@ if __name__ == "__main__":
     # 기존 데이터 불러오기
     train_data, test_data, sample_submission, interest_data, subway_data, school_data, park_data = load_dataset()
     # 기존 데이터에 새로운 feature들을 병합한 데이터프레임 불러오기
+    interest_data = np.log1p(interest_data).diff()
     train_data, test_data = merge_dataset(train_data, test_data, interest_data, subway_data, school_data, park_data)
     
     ### 3. Data Preprocessing
@@ -57,24 +58,24 @@ if __name__ == "__main__":
     # log 변환
     train_data, test_data = apply_log_transformation(train_data, test_data)
 
-    # # clustering
-    # feature_columns = [
-    #     "latitude",
-    #     "longitude",
-    #     "log_subway_distance",
-    #     "log_school_distance",
-    #     "log_park_distance",
-    #     "num_of_subways_within_radius",
-    #     "num_of_schools_within_radius",
-    #     "num_of_parks_within_radius",
-    # ]
-    # coords = train_data[feature_columns]
-    # cm = ClusteringModel(data=coords)
-    # n_clusters = 20
-    # print("n_clusters:", n_clusters)
-    # kmeans_model = cm.kmeans_clustering(n_clusters, train_data, test_data, feature_columns, "cluster")
-    # train_data["cluster"] = kmeans_model.predict(train_data[feature_columns])
-    # test_data["cluster"] = kmeans_model.predict(test_data[feature_columns])
+    # clustering
+    feature_columns = [
+        "latitude",
+        "longitude",
+        # "log_subway_distance",
+        # "log_school_distance",
+        # "log_park_distance",
+        # "num_of_subways_within_radius",
+        # "num_of_schools_within_radius",
+        # "num_of_parks_within_radius",
+    ]
+    coords = train_data[feature_columns]
+    cm = ClusteringModel(data=coords)
+    n_clusters = 20
+    print("n_clusters:", n_clusters)
+    kmeans_model = cm.kmeans_clustering(n_clusters, train_data, test_data, feature_columns, "cluster")
+    train_data["cluster"] = kmeans_model.predict(train_data[feature_columns])
+    test_data["cluster"] = kmeans_model.predict(test_data[feature_columns])
 
     # train_data split
     X, y = split_features_and_target(train_data)
