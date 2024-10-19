@@ -10,7 +10,8 @@ def merge_dataset(
     school_data: pd.DataFrame,
     park_data: pd.DataFrame
 ) -> Union[pd.DataFrame, pd.DataFrame]:
-    """학습(훈련), 테스트 데이터프레임에 새로운 변수를 추가하거나 병합한 데이터프레임으로 반환하는 함수
+    """
+    학습(훈련), 테스트 데이터프레임에 새로운 변수를 추가하거나 병합한 데이터프레임으로 반환하는 함수
 
     Args:
         train_data (pd.DataFrame): 학습(훈련) 데이터프레임
