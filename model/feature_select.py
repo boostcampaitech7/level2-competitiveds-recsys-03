@@ -30,7 +30,7 @@ def select_features(X, y, test_data):
         # "num_of_schools_within_radius",
         "num_of_parks_within_radius",
         "cluster",
-        "interest_rate"
+        # "interest_rate"
     ]
 
     # selected_cols = select_kbest(X[selected_cols], y, "log_deposit")
