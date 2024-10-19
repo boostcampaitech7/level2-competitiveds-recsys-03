@@ -1,6 +1,7 @@
 from data.load_dataset import load_dataset
 from data.merge_dataset import merge_dataset
-from data.feature_engineering import ClusteringModel
+from data.feature_engineering import *
+from data.data_preprocessing import *
 from model.inference import save_csv
 from model.feature_select import select_features
 from model.data_split import split_features_and_target
@@ -45,13 +46,7 @@ if __name__ == "__main__":
     ### 3. Data Preprocessing
 
     # 위치 중복도 낮은 행 삭제
-    groups = train_data.groupby(["latitude", "longitude"])["index"].count()
-    conditioned_groups_index = groups[(groups >= 2) & (groups <= 5)].index # 이 범위를 파라미터로 조정하는걸로
-    small_groups = train_data[
-        train_data["latitude"].isin(conditioned_groups_index.get_level_values(0)) &
-        train_data["longitude"].isin(conditioned_groups_index.get_level_values(1))
-    ]
-    train_data.drop(small_groups.index, axis=0, inplace=True)
+    train_data = delete_low_density(train_data, 2, 6)
     
     # built_year > 2024 행 삭제
     train_data = train_data[train_data["built_year"] < 2024]
@@ -62,24 +57,24 @@ if __name__ == "__main__":
     # log 변환
     train_data, test_data = apply_log_transformation(train_data, test_data)
 
-    # clustering
-    feature_columns = [
-        "latitude",
-        "longitude",
-        "log_subway_distance",
-        "log_school_distance",
-        "log_park_distance",
-        "num_of_subways_within_radius",
-        "num_of_schools_within_radius",
-        "num_of_parks_within_radius",
-    ]
-    coords = train_data[feature_columns]
-    cm = ClusteringModel(data=coords)
-    n_clusters = 20
-    print("n_clusters:", n_clusters)
-    kmeans_model = cm.kmeans_clustering(n_clusters, train_data, test_data, feature_columns, "cluster")
-    train_data["cluster"] = kmeans_model.predict(train_data[feature_columns])
-    test_data["cluster"] = kmeans_model.predict(test_data[feature_columns])
+    # # clustering
+    # feature_columns = [
+    #     "latitude",
+    #     "longitude",
+    #     "log_subway_distance",
+    #     "log_school_distance",
+    #     "log_park_distance",
+    #     "num_of_subways_within_radius",
+    #     "num_of_schools_within_radius",
+    #     "num_of_parks_within_radius",
+    # ]
+    # coords = train_data[feature_columns]
+    # cm = ClusteringModel(data=coords)
+    # n_clusters = 20
+    # print("n_clusters:", n_clusters)
+    # kmeans_model = cm.kmeans_clustering(n_clusters, train_data, test_data, feature_columns, "cluster")
+    # train_data["cluster"] = kmeans_model.predict(train_data[feature_columns])
+    # test_data["cluster"] = kmeans_model.predict(test_data[feature_columns])
 
     # train_data split
     X, y = split_features_and_target(train_data)
