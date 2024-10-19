@@ -1,5 +1,6 @@
 import pandas as pd
 import numpy as np
+from datetime import datetime
 from sklearn.metrics import mean_absolute_error
 from sklearn.model_selection import KFold
 from model.TreeModel import XGBoost, LightGBM, CatBoost
@@ -86,6 +87,7 @@ def optuna_train(model_name: str, X: pd.DataFrame, y: pd.DataFrame) -> tuple[dic
                     "learning_rate": trial.suggest_float("learning_rate", 0.01, 0.2),
                     "max_depth": trial.suggest_int("max_depth", 5, 12),
                     "subsample": trial.suggest_float("subsample", 0.5, 1.0),
+                    "n_jobs": -1
                 }
             case "lightgbm":
                 params = {
@@ -115,6 +117,7 @@ def optuna_train(model_name: str, X: pd.DataFrame, y: pd.DataFrame) -> tuple[dic
     
     # 콜백 함수 정의 (현재 trial 값과 최적 trial 값 출력)
     def print_formatted_params(study, trial):
+        print(datetime.now().strftime("[%Y-%m-%d %H:%M:%S]"), end=" ")
         print(f"Trial {trial.number}", end=" ===> ")
         print(f"Value: {trial.value:.4f}", end=", ")
         
@@ -123,7 +126,7 @@ def optuna_train(model_name: str, X: pd.DataFrame, y: pd.DataFrame) -> tuple[dic
             print(f"Best Value: {study.best_value:.4f}", end=" | ")
         
         formatted_params = {k: f"{v:.4f}" if isinstance(v, float) else v for k, v in trial.params.items()}
-        print(f"Trial {trial.number}: {formatted_params}")
+        print(formatted_params)
     
     sampler = optuna.samplers.TPESampler(seed=42)
     study = optuna.create_study(direction="minimize", sampler=sampler)
