@@ -1,6 +1,6 @@
 from typing import Union
 import pandas as pd
-from data.feature_engineering import find_nearest_haversine_distance, find_places_within_radius
+from data.feature_engineering import *
 
 def merge_dataset(
     train_data: pd.DataFrame, 
@@ -188,10 +188,10 @@ def merge_dataset(
     unique_loc_train: pd.DataFrame = train_data[["latitude", "longitude"]].drop_duplicates().reset_index(drop=True)
     unique_loc_test: pd.DataFrame = test_data[["latitude", "longitude"]].drop_duplicates().reset_index(drop=True)
 
+    # subway_data, school_data, park_data에서 위도, 경도 중복 행을 제외하고 추출
     unique_loc_subway: pd.DataFrame = subway_data[["latitude", "longitude"]].drop_duplicates().reset_index(drop=True) # 같은 역이 다른 노선을 지나면 중복해서 카운트하므로 제거
     unique_loc_school: pd.DataFrame = school_data[["latitude", "longitude"]].drop_duplicates().reset_index(drop=True)
     unique_loc_park: pd.DataFrame = park_data[["latitude", "longitude"]].drop_duplicates().reset_index(drop=True)
-
 
     # train_data에 700m 반경 이내 지하철 역 개수 정보 추가
     merged_df: pd.DataFrame = find_places_within_radius(unique_loc_train, unique_loc_subway, 700)
@@ -203,7 +203,6 @@ def merge_dataset(
     test_data: pd.DataFrame = pd.merge(test_data, merged_df, on=["latitude", "longitude"], how="left")
     test_data.rename(columns={"num_of_places_within_radius": "num_of_subways_within_radius"}, inplace=True)
 
-
     # train_data에 700m 반경 이내 학교 개수 정보 추가
     merged_df: pd.DataFrame = find_places_within_radius(unique_loc_train, unique_loc_school, 700)
     train_data: pd.DataFrame = pd.merge(train_data, merged_df, on=["latitude", "longitude"], how="left")
@@ -214,16 +213,68 @@ def merge_dataset(
     test_data: pd.DataFrame = pd.merge(test_data, merged_df, on=["latitude", "longitude"], how="left")
     test_data.rename(columns={"num_of_places_within_radius": "num_of_schools_within_radius"}, inplace=True)
 
-
     # train_data에 700m 반경 이내 공원 개수 정보 추가
     merged_df: pd.DataFrame = find_places_within_radius(unique_loc_train, unique_loc_park, 700)
     train_data: pd.DataFrame = pd.merge(train_data, merged_df, on=["latitude", "longitude"], how="left")
     train_data.rename(columns={"num_of_places_within_radius": "num_of_parks_within_radius"}, inplace=True)
 
-
     # test_data에 700m 반경 이내 공원 개수 정보 추가
     merged_df: pd.DataFrame = find_places_within_radius(unique_loc_test, unique_loc_park, 700)
     test_data: pd.DataFrame = pd.merge(test_data, merged_df, on=["latitude", "longitude"], how="left")
     test_data.rename(columns={"num_of_places_within_radius": "num_of_parks_within_radius"}, inplace=True)
+
+
+    ### 클러스터링 변수: kmeans_clustering 활용 ###
+    # 클러스터링 학습에 사용할 feature 선택
+    feature_columns = ["latitude",	"longitude"]
+    coords = train_data[feature_columns]
+
+    # 클러스터링 객체 생성
+    cm = ClusteringModel(data=coords)
+
+    # 클러스터 개수(k) 설정
+    n_clusters = 30
+    
+    # k-means 클러스터링 수행 후 train_data, test_data에 region 변수 추가
+    kmeans = cm.kmeans_clustering(n_clusters, train_data, test_data, 
+						          feature_columns,
+							      label_column="region"
+    )
+
+
+    ### 건물-대장 아파트 최단거리 변수: find_nearest_haversine_distance 활용 ###
+    # train_data 대장 아파트 데이터프레임 생성
+    max_deposits = train_data.groupby(["region"])["deposit"].max()
+    leader_train_data = pd.DataFrame()
+
+    for i in max_deposits.index:
+        tmp = train_data[(train_data["region"] == i) & (train_data["deposit"] == max_deposits[i])][["region", "deposit", "latitude", "longitude"]] 
+        leader_train_data = pd.concat([leader_train_data, tmp], axis=0, ignore_index=True)
+
+    leader_train_data = leader_train_data.drop_duplicates().reset_index(drop=True) # 위도, 경도 중복 제거
+    
+    # train_data에 대장 아파트 최단거리 추가
+    merged_df: pd.DataFrame = find_nearest_haversine_distance(unique_loc_train, leader_train_data)
+    merged_df: pd.DataFrame = pd.concat([merged_df, unique_loc_train], axis=1)
+    train_data: pd.DataFrame = pd.merge(train_data, merged_df, on=["latitude", "longitude"], how="left")
+    train_data.rename(columns={
+            "nearest_distance": "nearest_leader_distance",
+            "nearest_latitude": "nearest_leader_latitude",
+            "nearest_longitude": "nearest_leader_longitude"
+            }, 
+            inplace=True
+    )
+
+    # test_data에선 대장 아파트를 따로 알 수 없는 거니까 train_data의 대장 아파트를 활용해서 거리 계산을 한다.
+    merged_df: pd.DataFrame = find_nearest_haversine_distance(unique_loc_test, leader_train_data)
+    merged_df: pd.DataFrame = pd.concat([merged_df, unique_loc_test], axis=1)
+    test_data: pd.DataFrame = pd.merge(test_data, merged_df, on=["latitude", "longitude"], how="left")
+    test_data.rename(columns={
+            "nearest_distance": "nearest_leader_distance",
+            "nearest_latitude": "nearest_leader_latitude",
+            "nearest_longitude": "nearest_leader_longitude"
+            }, 
+            inplace=True
+    )
 
     return train_data, test_data
