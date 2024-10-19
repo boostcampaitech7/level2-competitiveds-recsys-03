@@ -21,6 +21,7 @@ def select_features(X, y, test_data):
         "built_year",
         "latitude",
         "longitude",
+        "nearest_leader_distance",
         "log_subway_distance",
         # "log_school_distance",
         "log_park_distance",
@@ -29,7 +30,7 @@ def select_features(X, y, test_data):
         "num_of_subways_within_radius",
         # "num_of_schools_within_radius",
         "num_of_parks_within_radius",
-        "cluster",
+        "region",
         # "interest_rate"
     ]
 
