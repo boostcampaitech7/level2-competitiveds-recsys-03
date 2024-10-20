@@ -44,7 +44,7 @@ def cv_train(model, X: pd.DataFrame, y: pd.DataFrame, verbose: bool = True) -> f
     cv = 5
     kfold = KFold(n_splits=cv, shuffle=True, random_state=42)
 
-    mae_list = []
+    mae_list, mae_list_train = [], []
     for i, (train_idx, valid_idx) in enumerate(kfold.split(X, y), start=1):
         if verbose: print(f"training...[{i}/{cv}]")
 
@@ -55,16 +55,22 @@ def cv_train(model, X: pd.DataFrame, y: pd.DataFrame, verbose: bool = True) -> f
 
         y_pred = model.predict(X_valid)
         y_pred = np.expm1(y_pred)
+
+        y_pred_train = model.predict(X_train)
+        y_pred_train = np.expm1(y_pred_train)
         fold_mae = mean_absolute_error(y_valid, y_pred)
+        fold_mae_train = mean_absolute_error(np.expm1(y_train), y_pred_train)
         if verbose: print(f"Valid MAE: {fold_mae:.4f}")
         mae_list.append(fold_mae)
+        mae_list_train.append(fold_mae_train)
 
     mae = np.mean(mae_list)
+    mae_train = np.mean(mae_list_train)
     if verbose:
         print("### K-fold Result ###")
         print(f"Valid MAE: {mae:.4f}")
     
-    return mae
+    return mae, mae_train
 
 def optuna_train(model_name: str, X: pd.DataFrame, y: pd.DataFrame) -> tuple[dict, float]:
     """Optuna를 사용하여 주어진 모델의 하이퍼파라미터를 최적하는 함수
@@ -83,9 +89,9 @@ def optuna_train(model_name: str, X: pd.DataFrame, y: pd.DataFrame) -> tuple[dic
         match model_name:
             case "xgboost":
                 params = {
-                    "n_estimators": trial.suggest_int("n_estimators", 50, 300),
-                    "learning_rate": trial.suggest_float("learning_rate", 0.01, 0.2),
-                    "max_depth": trial.suggest_int("max_depth", 5, 12),
+                    "n_estimators": trial.suggest_int("n_estimators", 100, 1000),
+                    "learning_rate": trial.suggest_float("learning_rate", 0.01, 0.3),
+                    "max_depth": trial.suggest_int("max_depth", 5, 16),
                     "subsample": trial.suggest_float("subsample", 0.5, 1.0),
                     "n_jobs": -1
                 }
@@ -113,13 +119,15 @@ def optuna_train(model_name: str, X: pd.DataFrame, y: pd.DataFrame) -> tuple[dic
                     "devices": "cuda",
                 }
         model = set_model(model_name, **params)
-        return cv_train(model, X, y, verbose=False)
+        val_mae, train_mae = cv_train(model, X, y, verbose=False)
+        print(datetime.now().strftime(f"[%Y-%m-%d %H:%M:%S]"), end=" ")
+        print(f"Trial {trial.number}", end=" ===> ")
+        print(f"Train Value: {train_mae:.4f}", end=" ")
+        return val_mae
     
     # 콜백 함수 정의 (현재 trial 값과 최적 trial 값 출력)
     def print_formatted_params(study, trial):
-        print(datetime.now().strftime("[%Y-%m-%d %H:%M:%S]"), end=" ")
-        print(f"Trial {trial.number}", end=" ===> ")
-        print(f"Value: {trial.value:.4f}", end=", ")
+        print(f"Valid Value: {trial.value:.4f}", end=", ")
         
         # 현재까지 최적의 trial 값 출력
         if study.best_value is not None:

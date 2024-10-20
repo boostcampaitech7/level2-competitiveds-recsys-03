@@ -41,7 +41,6 @@ if __name__ == "__main__":
     # 기존 데이터 불러오기
     train_data, test_data, sample_submission, interest_data, subway_data, school_data, park_data = load_dataset()
     # 기존 데이터에 새로운 feature들을 병합한 데이터프레임 불러오기
-    interest_data = np.log1p(interest_data).diff()
     train_data, test_data = merge_dataset(train_data, test_data, interest_data, subway_data, school_data, park_data)
     
     ### 3. Data Preprocessing
