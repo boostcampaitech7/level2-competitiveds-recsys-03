@@ -89,9 +89,9 @@ def optuna_train(model_name: str, X: pd.DataFrame, y: pd.DataFrame) -> tuple[dic
         match model_name:
             case "xgboost":
                 params = {
-                    "n_estimators": trial.suggest_int("n_estimators", 100, 1000),
+                    "n_estimators": trial.suggest_int("n_estimators", 50, 300),
                     "learning_rate": trial.suggest_float("learning_rate", 0.01, 0.3),
-                    "max_depth": trial.suggest_int("max_depth", 5, 16),
+                    "max_depth": trial.suggest_int("max_depth", 5, 12),
                     "subsample": trial.suggest_float("subsample", 0.5, 1.0),
                     "n_jobs": -1
                 }
