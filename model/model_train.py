@@ -1,5 +1,8 @@
 import pandas as pd
 import numpy as np
+from xgboost import XGBRegressor
+from lightgbm import LGBMRegressor
+from catboost import CatBoostRegressor
 from typing import Any
 from sklearn.metrics import mean_absolute_error
 from sklearn.model_selection import KFold
@@ -140,42 +143,52 @@ def voting_train(
             match model_name:
                 case "xgboost":
                     params = {
-                        "n_estimators": trial.suggest_int("XGB_n_estimators", 50, 300),
-                        "learning_rate": trial.suggest_float("XGB_learning_rate", 0.01, 0.2),
-                        "max_depth": trial.suggest_int("XGB_max_depth", 5, 12),
-                        "subsample": trial.suggest_float("XGB_subsample", 0.5, 1.0),
+                        "n_estimators": trial.suggest_int("n_estimators", 50, 300),
+                        "learning_rate": trial.suggest_float("learning_rate", 0.01, 0.2),
+                        "max_depth": trial.suggest_int("max_depth", 5, 12),
+                        "subsample": trial.suggest_float("subsample", 0.5, 1.0),
                     }
-                    model = XGBoost(**params)
+                    model = XGBRegressor(**params, random_state=42, device="cuda")
                 case "lightgbm":
                     params = {
                         "verbose": -1,
-                        "n_estimators": trial.suggest_int("LGBM_n_estimators", 50, 300),
-                        "learning_rate": trial.suggest_float("LGBM_learning_rate", 0.01, 0.3, log=True),
-                        "max_depth": trial.suggest_int("LGBM_max_depth", 5, 12),
-                        "subsample": trial.suggest_float("LGBM_subsample", 0.5, 1.0),
-                        "num_leaves": trial.suggest_int("LGBM_num_leaves", 20, 150),
+                        "n_estimators": trial.suggest_int("n_estimators", 50, 300),
+                        "learning_rate": trial.suggest_float("learning_rate", 0.01, 0.3, log=True),
+                        "max_depth": trial.suggest_int("max_depth", 5, 12),
+                        "subsample": trial.suggest_float("subsample", 0.5, 1.0),
+                        "num_leaves": trial.suggest_int("num_leaves", 20, 150),
                         "objective": "regression_l1"
                     }
-                    model = LightGBM(**params)
+                    model = LGBMRegressor(**params, random_state=42, device="cuda")
                 case "catboost":
                     params = {
                         "verbose": 0,
-                        "learning_rate": trial.suggest_float("Cat_learning_rate", 0.01, 0.3),
-                        "iterations": trial.suggest_int("Cat_iterations", 50, 500),
-                        "depth": trial.suggest_int("Cat_depth", 3, 10),
-                        "l2_leaf_reg": trial.suggest_int("Cat_l2_leaf_reg", 1, 10),
+                        "learning_rate": trial.suggest_float("learning_rate", 0.01, 0.3),
+                        "iterations": trial.suggest_int("iterations", 50, 500),
+                        "depth": trial.suggest_int("depth", 3, 10),
+                        "l2_leaf_reg": trial.suggest_int("l2_leaf_reg", 1, 10),
                         # "bagging_temperature": trial.suggest_loguniform("bagging_temperature", 0.01, 1),
                         # "border_count": trial.suggest_int("border_count", 32, 255),
                         "cat_features": ["contract_day"],
                         "task_type": "GPU",
                         "devices": "cuda",
                     }
-                    model = CatBoost(**params)
+                    model = CatBoostRegressor(**params, random_state=42)
+                    
             model_params.append((model_name, model))
-        
+
+        # 가중치 설정
         weights = []
-        for i in range(len(model_params)):
-            weights.append(trial.suggest_float(f"{model_params[i][0]}", 0.0, 1.0))
+        for model_name in models:
+            weight = trial.suggest_float(f"{model_name} weight", 0.0, 1.0)
+            weights.append(weight)
+
+        # 가중치의 합이 1이 되도록 정규화
+        total_weight = sum(weights)
+        if total_weight > 0:
+            weights = [w / total_weight for w in weights]
+        else:
+            weights = [1.0 / len(weights)] * len(weights)  # 모든 가중치를 동일하게 설정
         
         voting_model = set_model(model_name="Voting", models=model_params, params=weights)
         return cv_train(voting_model, X, y, verbose=False)
