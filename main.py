@@ -1,13 +1,18 @@
+from xgboost import XGBRegressor
+from lightgbm import LGBMRegressor
+from catboost import CatBoostRegressor
 from data.load_dataset import load_dataset
 from data.merge_dataset import merge_dataset
 from model.inference import save_csv
 from model.feature_select import select_features
 from model.data_split import split_features_and_target
 from model.log_transformation import apply_log_transformation
-from model.model_train import cv_train, set_model, optuna_train
+from model.model_train import cv_train, set_model, optuna_train, voting_train
 import argparse
 import os
 import wandb
+import warnings
+warnings.filterwarnings("ignore")
 
 # 메인 실행 코드
 if __name__ == "__main__":
@@ -15,7 +20,7 @@ if __name__ == "__main__":
     ### 0. Argument Parsing
 
     parser = argparse.ArgumentParser(prog = "수도권 아파트 전세 예측", description="사용법 python train.py --model 모델명(소문자)")
-    parser.add_argument("--model", type=str, choices=["xgboost", "lightgbm", "catboost", "ensemble"], default="xgboost", help="Select the model to train")
+    parser.add_argument("--model", type=str, choices=["xgboost", "lightgbm", "catboost", "voting"], default="xgboost", help="Select the model to train")
     parser.add_argument("--optuna", type=str, choices=["on", "off"], default="off", help="Select Optuna option")
     parser.add_argument("--project", type=str, default="no_name", help="Input the project name")
     parser.add_argument("--run", type=str, default="no_name", help="Input the run name")
@@ -68,9 +73,20 @@ if __name__ == "__main__":
     X, test_data = select_features(X, y, test_data)
     
     ### 5. Model Train and Evaulate
-    
-    if args.optuna == "on":
+    if args.model == "voting":
+        models = ["xgboost", "catboost"]
+        # models = {
+        #     "XGBoost": XGBRegressor(n_estimators=249, learning_rate=0.1647758714498898, max_depth=12, subsample=0.9996749158433582, device="cuda", random_state=42),
+        #     "CatBoost": CatBoostRegressor(iterations=300, learning_rate=0.1, depth=12, devices="cuda", random_state=42, verbose=0)
+        # }
+        best_params, mae = voting_train(models, X, y)
+        best_model = set_model(args.model, **best_params)
+        best_model = best_model.train(X, y["log_deposit"])
+        
+    elif args.optuna == "on":
         best_params, mae = optuna_train(args.model, X, y)
+        best_model = set_model(args.model, **best_params)
+        best_model = best_model.train(X, y["log_deposit"])
     else:
         best_params = {
             'n_estimators': 249,
@@ -82,8 +98,7 @@ if __name__ == "__main__":
         best_model = set_model(args.model, **best_params)
         mae = cv_train(best_model, X, y)
 
-    best_model = set_model(args.model, **best_params)
-    best_model = best_model.train(X, y["log_deposit"])
+    
 
     ### 6. WandB Log and Finish
 
