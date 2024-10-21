@@ -137,9 +137,24 @@ def voting_train(
         y: pd.DataFrame,
         n_trials: int = 50
     ) -> tuple[dict, float]:
+    """
+    optuna를 이용한 Voting Regressor 최적화 함수입니다.
+
+    Args:
+        models (list[str]): 보팅을 수행할 모델의 리스트.
+        X (pd.DataFrame): 독립 변수
+        y (pd.DataFrame): 예측 변수
+        n_trials (int, optional): optuna 시행 횟수. Defaults to 50.
+
+    Returns:
+        tuple[dict, float]: 
+            - dict: 최적의 하이퍼파라미터
+            - float: 최적의 하이퍼파라미터에 대한 성능 지표(MAE)
+    """
     def objective(trial):
         model_params = []
         for model_name in models:
+            # 개별 모델 및 하이퍼파라미터 정의
             match model_name:
                 case "xgboost":
                     params = {
@@ -174,7 +189,7 @@ def voting_train(
                         "devices": "cuda",
                     }
                     model = CatBoostRegressor(**params, random_state=42)
-                    
+            # 통합 모델 정의
             model_params.append((model_name, model))
 
         # 가중치 설정
@@ -192,7 +207,8 @@ def voting_train(
         
         voting_model = set_model(model_name="Voting", models=model_params, params=weights)
         return cv_train(voting_model, X, y, verbose=False)
-
+    
+    # 최적화 수행
     sampler = optuna.samplers.TPESampler(seed=42)
     study = optuna.create_study(direction="minimize", sampler=sampler)
     study.optimize(objective, n_trials=n_trials)
