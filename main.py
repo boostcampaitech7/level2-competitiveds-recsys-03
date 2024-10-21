@@ -8,7 +8,6 @@ from data.data_preprocessing import *
 from model.inference import save_csv
 from model.feature_select import select_features
 from model.data_split import split_features_and_target
-from model.log_transformation import apply_log_transformation
 from model.model_train import cv_train, set_model, optuna_train, voting_train
 import argparse
 import os
@@ -75,9 +74,10 @@ if __name__ == "__main__":
         #     "XGBoost": XGBRegressor(n_estimators=249, learning_rate=0.1647758714498898, max_depth=12, subsample=0.9996749158433582, device="cuda", random_state=42),
         #     "CatBoost": CatBoostRegressor(iterations=300, learning_rate=0.1, depth=12, devices="cuda", random_state=42, verbose=0)
         # }
-        best_params, mae = voting_train(models, X, y)
-        best_model = set_model(args.model, **best_params)
+        best_weights, best_models, mae = voting_train(models, X, y, n_trials=2)
+        best_model = set_model(model_name=args.model, weights=best_weights, models=best_models)
         best_model = best_model.train(X, y["log_deposit"])
+        best_params = best_models
         
     elif args.optuna == "on":
         best_params, mae = optuna_train(args.model, X, y)
@@ -94,14 +94,12 @@ if __name__ == "__main__":
         best_model = set_model(args.model, **best_params)
         mae = cv_train(best_model, X, y)
 
-    
-
     ### 6. WandB Log and Finish
 
     wandb.log({
         "features": list(X.columns),
         "model": args.model,
-        "params": best_params,
+        # "params": best_params,
         "valid MAE": mae
     })
     wandb.finish()
