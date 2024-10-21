@@ -1,17 +1,20 @@
 import pandas as pd
 import numpy as np
+from typing import Any
 from sklearn.metrics import mean_absolute_error
 from sklearn.model_selection import KFold
 from model.TreeModel import XGBoost, LightGBM, CatBoost
+from model.Ensemble import Voting
 import optuna
 RANDOM_SEED = 42
 
-def set_model(model_name: str, **params):
-    """주어진 모델 이름에 따라 모델을 생성하고 반환하는 함수입니다.
+def set_model(model_name: str, params, models: dict[str, Any] = None):
+    """
+    주어진 모델 이름에 따라 모델을 생성하고 반환하는 함수입니다.
 
     Args:
         model_name (str): 생성하려는 모델 이름
-        **params (dict): 모델 생성 시 사용할 하이퍼파라미터
+        params: 모델 생성 시 사용할 하이퍼파라미터
 
     Returns:
         model (object): 생성된 모델 객체
@@ -23,10 +26,13 @@ def set_model(model_name: str, **params):
             model = LightGBM(**params)
         case "catboost":
             model = CatBoost(**params)
+        case "Voting":
+            model = Voting(models=models, weights=params)
     return model
 
 def cv_train(model, X: pd.DataFrame, y: pd.DataFrame, verbose: bool = True) -> float:
-    """K-Fold를 이용하여 Cross Validation을 수행하는 함수입니다.
+    """
+    K-Fold를 이용하여 Cross Validation을 수행하는 함수입니다.
 
     Args:
         model: 수행하려는 모델
@@ -62,13 +68,20 @@ def cv_train(model, X: pd.DataFrame, y: pd.DataFrame, verbose: bool = True) -> f
     
     return mae
 
-def optuna_train(model_name: str, X: pd.DataFrame, y: pd.DataFrame) -> tuple[dict, float]:
-    """Optuna를 사용하여 주어진 모델의 하이퍼파라미터를 최적하는 함수
+def optuna_train(
+        model_name: str,
+        X: pd.DataFrame,
+        y: pd.DataFrame,
+        n_trials: int = 50
+    ) -> tuple[dict, float]:
+    """
+    Optuna를 사용하여 주어진 모델의 하이퍼파라미터를 최적화하는 함수입니다.
 
     Args:
         model_name (str): 최적화할 모델의 이름
         X (pd.DataFrame): 독립 변수
         y (pd.DataFrame): 예측 변수
+        n_trials (int): optuna trial 수
 
     Returns:
         tuple[dict, float]:
@@ -93,7 +106,7 @@ def optuna_train(model_name: str, X: pd.DataFrame, y: pd.DataFrame) -> tuple[dic
                     "subsample": trial.suggest_float("subsample", 0.5, 1.0),
                     "num_leaves": trial.suggest_int("num_leaves", 20, 150),
                     "objective": "regression_l1"
-            }
+                }
             case "catboost":
                 params = {
                     "verbose": 0,
@@ -112,5 +125,62 @@ def optuna_train(model_name: str, X: pd.DataFrame, y: pd.DataFrame) -> tuple[dic
     
     sampler = optuna.samplers.TPESampler(seed=42)
     study = optuna.create_study(direction="minimize", sampler=sampler)
-    study.optimize(objective, n_trials=50)
+    study.optimize(objective, n_trials=n_trials)
+    return study.best_params, study.best_value
+
+def voting_train(
+        models: list[str],
+        X: pd.DataFrame,
+        y: pd.DataFrame,
+        n_trials: int = 50
+    ) -> tuple[dict, float]:
+    def objective(trial):
+        model_params = []
+        for model_name in models:
+            match model_name:
+                case "xgboost":
+                    params = {
+                        "n_estimators": trial.suggest_int("XGB_n_estimators", 50, 300),
+                        "learning_rate": trial.suggest_float("XGB_learning_rate", 0.01, 0.2),
+                        "max_depth": trial.suggest_int("XGB_max_depth", 5, 12),
+                        "subsample": trial.suggest_float("XGB_subsample", 0.5, 1.0),
+                    }
+                    model = XGBoost(**params)
+                case "lightgbm":
+                    params = {
+                        "verbose": -1,
+                        "n_estimators": trial.suggest_int("LGBM_n_estimators", 50, 300),
+                        "learning_rate": trial.suggest_float("LGBM_learning_rate", 0.01, 0.3, log=True),
+                        "max_depth": trial.suggest_int("LGBM_max_depth", 5, 12),
+                        "subsample": trial.suggest_float("LGBM_subsample", 0.5, 1.0),
+                        "num_leaves": trial.suggest_int("LGBM_num_leaves", 20, 150),
+                        "objective": "regression_l1"
+                    }
+                    model = LightGBM(**params)
+                case "catboost":
+                    params = {
+                        "verbose": 0,
+                        "learning_rate": trial.suggest_float("Cat_learning_rate", 0.01, 0.3),
+                        "iterations": trial.suggest_int("Cat_iterations", 50, 500),
+                        "depth": trial.suggest_int("Cat_depth", 3, 10),
+                        "l2_leaf_reg": trial.suggest_int("Cat_l2_leaf_reg", 1, 10),
+                        # "bagging_temperature": trial.suggest_loguniform("bagging_temperature", 0.01, 1),
+                        # "border_count": trial.suggest_int("border_count", 32, 255),
+                        "cat_features": ["contract_day"],
+                        "task_type": "GPU",
+                        "devices": "cuda",
+                    }
+                    model = CatBoost(**params)
+            model_params.append((model_name, model))
+        
+        weights = []
+        for i in range(len(model_params)):
+            weights.append(trial.suggest_float(f"{model_params[i][0]}", 0.0, 1.0))
+        
+        voting_model = set_model(model_name="Voting", models=model_params, params=weights)
+        return cv_train(voting_model, X, y, verbose=False)
+
+    sampler = optuna.samplers.TPESampler(seed=42)
+    study = optuna.create_study(direction="minimize", sampler=sampler)
+    study.optimize(objective, n_trials=n_trials)
     return study.best_params, study.best_value
