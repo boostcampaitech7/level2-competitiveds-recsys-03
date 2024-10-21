@@ -247,6 +247,11 @@ def merge_dataset(
     test_data.rename(columns={"num_of_places_within_radius": "num_of_parks_within_radius"}, inplace=True)
 
 
+    ### 공원 근접성 유무 변수: 1000m 반경 이내 100,000 제곱미터 이상인 공원이 있으면 1, 아니면 0인 변수
+    train_data['park'] = train_data['num_of_parks_within_radius'].apply(lambda x: 1 if x != 0 else 0)
+    test_data['park'] = test_data['num_of_parks_within_radius'].apply(lambda x: 1 if x != 0 else 0)
+
+
     ### 클러스터링 변수: kmeans_clustering 활용 ###
     # 클러스터링 학습에 사용할 feature 선택
     feature_columns = ["latitude",	"longitude"]
