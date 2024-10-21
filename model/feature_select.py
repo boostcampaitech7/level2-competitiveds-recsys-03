@@ -24,7 +24,8 @@ def select_features(train_data, test_data):
         "log_park_distance",
         "contract_year_month",
         "contract_day",
-        #"num_of_subways_within_radius",
+        #"region",
+        #"region_mean",
     ]
     # 테스트 데이터에서 사용할 피처들
     test_cols = [
@@ -37,7 +38,8 @@ def select_features(train_data, test_data):
         "log_park_distance",
         "contract_year_month",
         "contract_day",
-        #"num_of_subways_within_radius",
+        #"region",
+        #"region_mean",
     ]
     # 피처 선택
     train_data_selected = train_data[train_cols]
