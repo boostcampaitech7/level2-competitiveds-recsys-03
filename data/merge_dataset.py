@@ -1,7 +1,7 @@
 from typing import Union
 import pandas as pd
 from data.feature_engineering import *
-
+    
 def merge_dataset(
     train_data: pd.DataFrame, 
     test_data: pd.DataFrame,
@@ -85,8 +85,24 @@ def merge_dataset(
         inplace=True
     )
 
-    # train_data에 최단거리 공원 정보 추가
-    merged_df: pd.DataFrame = find_nearest_haversine_distance(unique_loc_train, park_data)
+    # 공원 면적이 100,000 제곱미터 이상인 공원 데이터프레임 생성
+    radius_meter: int = 1000 # 탐색하려는 반경(단위: 미터)
+    earth_radius_meter: int = 6371000 # 지구의 반경(단위: 미터)
+    extend_radian: float = radius_meter / earth_radius_meter # 선택하려는 위도, 경도 범위에서 탐색하고자 하는 반경만큼 범위 확장(단위: 라디안)
+    criterion = 100000 # 도시지역권 근린공원 면적 기준
+
+    new_park_data: pd.DataFrame = park_data[
+          (park_data["latitude"] >= (train_data["latitude"].min() - extend_radian))
+        & (park_data["latitude"] <= (train_data["latitude"].max() + extend_radian))
+        & (park_data["longitude"] >= (train_data["longitude"].min() - extend_radian))
+        & (park_data["longitude"] <= (train_data["longitude"].max() + extend_radian))
+    ]
+    new_park_data = new_park_data.drop_duplicates().reset_index(drop=True) # 중복값 16개 drop
+    new_park_data = new_park_data[new_park_data["area"] > criterion] # 공원 면적이 100,000 제곱미터 이상만 고려
+    new_park_data = new_park_data.reset_index(drop=True)
+    
+    # train_data에 최단거리 공원 정보 추가 (조건: 공원 면적이 100,000 제곱미터 이상인 공원들만 생각)
+    merged_df: pd.DataFrame = find_nearest_haversine_distance(unique_loc_train, new_park_data)
     merged_df: pd.DataFrame = pd.concat([merged_df, unique_loc_train], axis=1)
     train_data: pd.DataFrame = pd.merge(train_data, merged_df, on=["latitude", "longitude"], how="left")
     train_data.rename(columns={
@@ -97,8 +113,8 @@ def merge_dataset(
         inplace=True
     )
 
-    # test_data에 최단거리 공원 정보 추가
-    merged_df: pd.DataFrame = find_nearest_haversine_distance(unique_loc_test, park_data)
+    # test_data에 최단거리 공원 정보 추가 (조건: 공원 면적이 100,000 제곱미터 이상인 공원들만 생각)
+    merged_df: pd.DataFrame = find_nearest_haversine_distance(unique_loc_test, new_park_data)
     merged_df: pd.DataFrame = pd.concat([merged_df, unique_loc_test], axis=1)
     test_data: pd.DataFrame = pd.merge(test_data, merged_df, on=["latitude", "longitude"], how="left")
     test_data.rename(columns={
@@ -114,11 +130,13 @@ def merge_dataset(
     # 개수를 센 데이터를 subway_count, school_count, park_count로 반환
     subway_count: pd.DataFrame = subway_data.groupby(["latitude", "longitude"]).size().reset_index(name='nearest_subway_num')
     school_count: pd.DataFrame = school_data.groupby(["latitude", "longitude"]).size().reset_index(name='nearest_school_num')
-    park_count: pd.DataFrame = park_data.groupby(["latitude", "longitude"]).size().reset_index(name='nearest_park_num')
+    park_count: pd.DataFrame = new_park_data.groupby(["latitude", "longitude"]).size().reset_index(name='nearest_park_num')
 
     # train_data에 최단거리 지하철의 위도, 경도에 대한 지하철 개수 정보 추가
-    train_data: pd.DataFrame = pd.merge(train_data, subway_count, left_on=["nearest_subway_latitude", "nearest_subway_longitude"],
-                                        right_on=["latitude", "longitude"], how="left")
+    train_data: pd.DataFrame = pd.merge(train_data, subway_count, 
+                                        left_on=["nearest_subway_latitude", "nearest_subway_longitude"],
+                                        right_on=["latitude", "longitude"], 
+                                        how="left")
     train_data: pd.DataFrame = train_data.drop(columns=["latitude_y", "longitude_y"])
     train_data.rename(columns={
         "latitude_x": "latitude",
@@ -128,8 +146,10 @@ def merge_dataset(
     )
 
     # test_data에 최단거리 지하철의 위도, 경도에 대한 지하철 개수 정보 추가
-    test_data: pd.DataFrame = pd.merge(test_data, subway_count, left_on=["nearest_subway_latitude", "nearest_subway_longitude"],
-                                        right_on=["latitude", "longitude"], how="left")
+    test_data: pd.DataFrame = pd.merge(test_data, subway_count, 
+                                       left_on=["nearest_subway_latitude", "nearest_subway_longitude"],
+                                       right_on=["latitude", "longitude"], 
+                                       how="left")
     test_data: pd.DataFrame = test_data.drop(columns=["latitude_y", "longitude_y"])
     test_data.rename(columns={
         "latitude_x": "latitude",
@@ -139,8 +159,10 @@ def merge_dataset(
     )
 
     # train_data에 최단거리 학교의 위도, 경도에 대한 학교 개수 정보 추가
-    train_data: pd.DataFrame = pd.merge(train_data, school_count, left_on=["nearest_school_latitude", "nearest_school_longitude"],
-                                        right_on=["latitude", "longitude"], how="left")
+    train_data: pd.DataFrame = pd.merge(train_data, school_count, 
+                                        left_on=["nearest_school_latitude", "nearest_school_longitude"],
+                                        right_on=["latitude", "longitude"], 
+                                        how="left")
     train_data: pd.DataFrame = train_data.drop(columns=["latitude_y", "longitude_y"])
     train_data.rename(columns={
         "latitude_x": "latitude",
@@ -150,8 +172,10 @@ def merge_dataset(
     )
 
     # test_data에 최단거리 학교의 위도, 경도에 대한 학교 개수 정보 추가
-    test_data: pd.DataFrame = pd.merge(test_data, school_count, left_on=["nearest_school_latitude", "nearest_school_longitude"],
-                                        right_on=["latitude", "longitude"], how="left")
+    test_data: pd.DataFrame = pd.merge(test_data, school_count, 
+                                       left_on=["nearest_school_latitude", "nearest_school_longitude"],
+                                       right_on=["latitude", "longitude"], 
+                                       how="left")
     test_data: pd.DataFrame = test_data.drop(columns=["latitude_y", "longitude_y"])
     test_data.rename(columns={
         "latitude_x": "latitude",
@@ -160,9 +184,11 @@ def merge_dataset(
         inplace=True
     )
 
-    # train_data에 최단거리 공원의 위도, 경도에 대한 공원 개수 정보 추가
-    train_data: pd.DataFrame = pd.merge(train_data, park_count, left_on=["nearest_park_latitude", "nearest_park_longitude"],
-                                        right_on=["latitude", "longitude"], how="left")
+    # train_data에 최단거리 공원(면적 100,000 제곱미터 이상)의 위도, 경도에 대한 공원 개수 정보 추가
+    train_data: pd.DataFrame = pd.merge(train_data, park_count, 
+                                        left_on=["nearest_park_latitude", "nearest_park_longitude"],
+                                        right_on=["latitude", "longitude"], 
+                                        how="left")
     train_data: pd.DataFrame = train_data.drop(columns=["latitude_y", "longitude_y"])
     train_data.rename(columns={
         "latitude_x": "latitude",
@@ -171,9 +197,11 @@ def merge_dataset(
         inplace=True
     )
 
-    # test_data에 최단거리 공원의 위도, 경도에 대한 공원 개수 정보 추가
-    test_data: pd.DataFrame = pd.merge(test_data, park_count, left_on=["nearest_park_latitude", "nearest_park_longitude"],
-                                        right_on=["latitude", "longitude"], how="left")
+    # test_data에 최단거리 공원(면적 100,000 제곱미터 이상)의 위도, 경도에 대한 공원 개수 정보 추가
+    test_data: pd.DataFrame = pd.merge(test_data, park_count, 
+                                       left_on=["nearest_park_latitude", "nearest_park_longitude"],
+                                       right_on=["latitude", "longitude"], 
+                                       how="left")
     test_data: pd.DataFrame = test_data.drop(columns=["latitude_y", "longitude_y"])
     test_data.rename(columns={
         "latitude_x": "latitude",
@@ -184,14 +212,9 @@ def merge_dataset(
 
 
     ### 특정 반경 내 지하철, 학교, 공원 수 변수: find_places_within_radius 함수 활용 ###
-    # train_data, test_data에서 위도, 경도 중복 행을 제외하고 추출
-    unique_loc_train: pd.DataFrame = train_data[["latitude", "longitude"]].drop_duplicates().reset_index(drop=True)
-    unique_loc_test: pd.DataFrame = test_data[["latitude", "longitude"]].drop_duplicates().reset_index(drop=True)
-
-    # subway_data, school_data, park_data에서 위도, 경도 중복 행을 제외하고 추출
+    # subway_data, school_data, new_park_data에서 위도, 경도 중복 행을 제외하고 추출 (new_park_data에서 미리 중복도 제거)
     unique_loc_subway: pd.DataFrame = subway_data[["latitude", "longitude"]].drop_duplicates().reset_index(drop=True) # 같은 역이 다른 노선을 지나면 중복해서 카운트하므로 제거
     unique_loc_school: pd.DataFrame = school_data[["latitude", "longitude"]].drop_duplicates().reset_index(drop=True)
-    unique_loc_park: pd.DataFrame = park_data[["latitude", "longitude"]].drop_duplicates().reset_index(drop=True)
 
     # train_data에 700m 반경 이내 지하철 역 개수 정보 추가
     merged_df: pd.DataFrame = find_places_within_radius(unique_loc_train, unique_loc_subway, 700)
@@ -213,13 +236,13 @@ def merge_dataset(
     test_data: pd.DataFrame = pd.merge(test_data, merged_df, on=["latitude", "longitude"], how="left")
     test_data.rename(columns={"num_of_places_within_radius": "num_of_schools_within_radius"}, inplace=True)
 
-    # train_data에 700m 반경 이내 공원 개수 정보 추가
-    merged_df: pd.DataFrame = find_places_within_radius(unique_loc_train, unique_loc_park, 700)
+    # train_data에 1000m 반경 이내 100,000 제곱미터 이상인 공원 개수 정보 추가
+    merged_df: pd.DataFrame = find_places_within_radius(unique_loc_train, new_park_data, 1000)
     train_data: pd.DataFrame = pd.merge(train_data, merged_df, on=["latitude", "longitude"], how="left")
     train_data.rename(columns={"num_of_places_within_radius": "num_of_parks_within_radius"}, inplace=True)
 
-    # test_data에 700m 반경 이내 공원 개수 정보 추가
-    merged_df: pd.DataFrame = find_places_within_radius(unique_loc_test, unique_loc_park, 700)
+    # test_data에 1000m 반경 이내 100,000 제곱미터 이상인 공원 개수 정보 추가
+    merged_df: pd.DataFrame = find_places_within_radius(unique_loc_test, new_park_data, 1000)
     test_data: pd.DataFrame = pd.merge(test_data, merged_df, on=["latitude", "longitude"], how="left")
     test_data.rename(columns={"num_of_places_within_radius": "num_of_parks_within_radius"}, inplace=True)
 
@@ -248,7 +271,10 @@ def merge_dataset(
     leader_train_data = pd.DataFrame()
 
     for i in max_deposits.index:
-        tmp = train_data[(train_data["region"] == i) & (train_data["deposit"] == max_deposits[i])][["region", "deposit", "latitude", "longitude"]] 
+        tmp = train_data[
+              (train_data["region"] == i) 
+            & (train_data["deposit"] == max_deposits[i])
+        ][["region", "deposit", "latitude", "longitude"]] 
         leader_train_data = pd.concat([leader_train_data, tmp], axis=0, ignore_index=True)
 
     leader_train_data = leader_train_data.drop_duplicates().reset_index(drop=True) # 위도, 경도 중복 제거
@@ -258,11 +284,11 @@ def merge_dataset(
     merged_df: pd.DataFrame = pd.concat([merged_df, unique_loc_train], axis=1)
     train_data: pd.DataFrame = pd.merge(train_data, merged_df, on=["latitude", "longitude"], how="left")
     train_data.rename(columns={
-            "nearest_distance": "nearest_leader_distance",
-            "nearest_latitude": "nearest_leader_latitude",
-            "nearest_longitude": "nearest_leader_longitude"
-            }, 
-            inplace=True
+        "nearest_distance": "nearest_leader_distance",
+        "nearest_latitude": "nearest_leader_latitude",
+        "nearest_longitude": "nearest_leader_longitude"
+        }, 
+        inplace=True
     )
 
     # test_data에선 대장 아파트를 따로 알 수 없는 거니까 train_data의 대장 아파트를 활용해서 거리 계산을 한다.
@@ -270,11 +296,11 @@ def merge_dataset(
     merged_df: pd.DataFrame = pd.concat([merged_df, unique_loc_test], axis=1)
     test_data: pd.DataFrame = pd.merge(test_data, merged_df, on=["latitude", "longitude"], how="left")
     test_data.rename(columns={
-            "nearest_distance": "nearest_leader_distance",
-            "nearest_latitude": "nearest_leader_latitude",
-            "nearest_longitude": "nearest_leader_longitude"
-            }, 
-            inplace=True
+        "nearest_distance": "nearest_leader_distance",
+        "nearest_latitude": "nearest_leader_latitude",
+        "nearest_longitude": "nearest_leader_longitude"
+        }, 
+        inplace=True
     )
 
     return train_data, test_data
