@@ -20,7 +20,7 @@ if __name__ == "__main__":
     ### 0. Argument Parsing
 
     parser = argparse.ArgumentParser(prog = "수도권 아파트 전세 예측", description="사용법 python train.py --model 모델명(소문자)")
-    parser.add_argument("--model", type=str, choices=["xgboost", "lightgbm", "catboost", "voting", "stacking"], default="xgboost", help="Select the model to train")
+    parser.add_argument("--model", type=str, choices=["xgboost", "lightgbm", "catboost", "randomforest", "voting", "stacking"], default="xgboost", help="Select the model to train")
     parser.add_argument("--optuna", type=str, choices=["on", "off"], default="off", help="Select Optuna option")
     parser.add_argument("--project", type=str, default="no_name", help="Input the project name")
     parser.add_argument("--run", type=str, default="no_name", help="Input the run name")
@@ -90,7 +90,7 @@ if __name__ == "__main__":
         case _:
             if args.optuna == "on":
                 best_params, mae = optuna_train(args.model, X, y)
-                best_model = set_model(args.model, **best_params)
+                best_model = set_model(args.model, best_params)
                 best_model = best_model.train(X, y["log_deposit"])
             else:
                 best_params = {
@@ -100,7 +100,7 @@ if __name__ == "__main__":
                     'subsample': 0.9996749158433582
                 }
 
-                best_model = set_model(args.model, **best_params)
+                best_model = set_model(args.model, best_params)
                 mae = cv_train(best_model, X, y)
 
     ### 6. WandB Log and Finish
