@@ -3,10 +3,11 @@ import numpy as np
 from xgboost import XGBRegressor
 from lightgbm import LGBMRegressor
 from catboost import CatBoostRegressor
+from sklearn.ensemble import RandomForestRegressor
 from typing import Any
 from sklearn.metrics import mean_absolute_error
 from sklearn.model_selection import KFold
-from model.TreeModel import XGBoost, LightGBM, CatBoost
+from model.TreeModel import XGBoost, LightGBM, CatBoost, RandomForest, H2ORandomForest
 from model.Ensemble import Voting
 import optuna
 RANDOM_SEED = 42
@@ -29,6 +30,10 @@ def set_model(model_name: str, params: Any = None, models: list[tuple[str, Any]]
             model = LightGBM(**params)
         case "catboost":
             model = CatBoost(**params)
+        case "randomforest":
+            model = RandomForest(**params)
+        case "h2o_randomforest":
+            model = H2ORandomForest(**params)
         case "voting":
             model = Voting(models=models, weights=weights)
     return model
@@ -123,6 +128,20 @@ def optuna_train(
                     "task_type": "GPU",
                     "devices": "cuda",
                 }
+            case "randomforest":
+                params = {
+                    "n_estimators": trial.suggest_int("n_estimators", 50, 300),
+                    "max_depth": trial.suggest_int("max_depth", 1, 30),
+                    "min_samples_split": trial.suggest_int("min_samples_split", 2, 10),
+                    "min_samples_leaf": trial.suggest_int("min_samples_leaf", 1, 10)
+                }
+            case "h2o_randomforest":
+                params = {
+                    "ntrees": trial.suggest_int("ntrees", 50, 300),
+                    "max_depth": trial.suggest_int("max_depth", 1, 30),
+                    "min_rows": trial.suggest_int("min_rows", 1, 10),
+                    "seed": RANDOM_SEED
+                }
         model = set_model(model_name=model_name, params=params)
         return cv_train(model, X, y, verbose=False)
     
@@ -163,7 +182,7 @@ def voting_train(
                         "max_depth": trial.suggest_int("XGB_max_depth", 5, 12),
                         "subsample": trial.suggest_float("XGB_subsample", 0.5, 1.0),
                     }
-                    model = XGBRegressor(**params, random_state=42, device="cuda")
+                    model = XGBRegressor(**params, random_state=42, device="cuda", n_jobs=-1)
                 case "lightgbm":
                     params = {
                         "verbose": -1,
@@ -174,7 +193,7 @@ def voting_train(
                         "num_leaves": trial.suggest_int("LGBM_num_leaves", 20, 150),
                         "objective": "regression_l1"
                     }
-                    model = LGBMRegressor(**params, random_state=42, device="cuda")
+                    model = LGBMRegressor(**params, random_state=42, device="cuda", n_jobs=-1)
                 case "catboost":
                     params = {
                         "verbose": 0,
@@ -188,7 +207,15 @@ def voting_train(
                         "task_type": "GPU",
                         "devices": "cuda",
                     }
-                    model = CatBoostRegressor(**params, random_state=42)
+                    model = CatBoostRegressor(**params, random_state=42, n_jobs=-1)
+                case "randomforest":
+                    params = {
+                        "n_estimators": trial.suggest_int("n_estimators", 50, 300),
+                        "max_depth": trial.suggest_int("max_depth", 1, 30),
+                        "min_samples_split": trial.suggest_int("min_samples_split", 2, 10),
+                        "min_samples_leaf": trial.suggest_int("min_samples_leaf", 1, 10)
+                    }
+                    model = RandomForestRegressor(**params, random_state=42, n_jobs=-1)
             # 통합 모델 정의
             model_params.append((model_name, model))
 
