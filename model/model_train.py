@@ -7,7 +7,7 @@ from sklearn.ensemble import RandomForestRegressor
 from typing import Any
 from sklearn.metrics import mean_absolute_error
 from sklearn.model_selection import KFold
-from model.TreeModel import XGBoost, LightGBM, CatBoost, RandomForest, H2ORandomForest
+from model.TreeModel import XGBoost, LightGBM, CatBoost, RandomForest
 from model.Ensemble import Voting
 import optuna
 RANDOM_SEED = 42
@@ -32,8 +32,6 @@ def set_model(model_name: str, params: Any = None, models: list[tuple[str, Any]]
             model = CatBoost(**params)
         case "randomforest":
             model = RandomForest(**params)
-        case "h2o_randomforest":
-            model = H2ORandomForest(**params)
         case "voting":
             model = Voting(models=models, weights=weights)
     return model
@@ -134,13 +132,6 @@ def optuna_train(
                     "max_depth": trial.suggest_int("max_depth", 1, 30),
                     "min_samples_split": trial.suggest_int("min_samples_split", 2, 10),
                     "min_samples_leaf": trial.suggest_int("min_samples_leaf", 1, 10)
-                }
-            case "h2o_randomforest":
-                params = {
-                    "ntrees": trial.suggest_int("ntrees", 50, 300),
-                    "max_depth": trial.suggest_int("max_depth", 1, 30),
-                    "min_rows": trial.suggest_int("min_rows", 1, 10),
-                    "seed": RANDOM_SEED
                 }
         model = set_model(model_name=model_name, params=params)
         return cv_train(model, X, y, verbose=False)
