@@ -123,7 +123,6 @@ def optuna_train(
                     "learning_rate": trial.suggest_float("learning_rate", 0.01, 0.3),
                     "max_depth": trial.suggest_int("max_depth", 5, 12),
                     "subsample": trial.suggest_float("subsample", 0.5, 1.0),
-                    "n_jobs": -1
                 }
             case "lightgbm":
                 params = {
@@ -192,9 +191,9 @@ def voting_train(
                 case "xgboost":
                     params = {
                         "n_estimators": trial.suggest_int("XGB_n_estimators", 50, 300),
-                        "learning_rate": trial.suggest_float("XGB_learning_rate", 0.01, 0.2),
+                        "learning_rate": trial.suggest_float("XGB_learning_rate", 0.01, 0.2, log=True),
                         "max_depth": trial.suggest_int("XGB_max_depth", 5, 12),
-                        "subsample": trial.suggest_float("XGB_subsample", 0.5, 1.0),
+                        "subsample": trial.suggest_float("XGB_subsample", 0.5, 1.0, log=True),
                     }
                     model = XGBRegressor(**params, random_state=42, device="cuda", n_jobs=-1)
                 case "lightgbm":
@@ -203,7 +202,7 @@ def voting_train(
                         "n_estimators": trial.suggest_int("LGBM_n_estimators", 50, 300),
                         "learning_rate": trial.suggest_float("LGBM_learning_rate", 0.01, 0.3, log=True),
                         "max_depth": trial.suggest_int("LGBM_max_depth", 5, 12),
-                        "subsample": trial.suggest_float("LGBM_subsample", 0.5, 1.0),
+                        "subsample": trial.suggest_float("LGBM_subsample", 0.5, 1.0, log=True),
                         "num_leaves": trial.suggest_int("LGBM_num_leaves", 20, 150),
                         "objective": "regression_l1"
                     }
@@ -211,17 +210,17 @@ def voting_train(
                 case "catboost":
                     params = {
                         "verbose": 0,
-                        "learning_rate": trial.suggest_float("Cat_learning_rate", 0.01, 0.3),
-                        "iterations": trial.suggest_int("Cat_iterations", 50, 500),
-                        "depth": trial.suggest_int("Cat_depth", 3, 10),
-                        "l2_leaf_reg": trial.suggest_int("Cat_l2_leaf_reg", 1, 10),
+                        "learning_rate": trial.suggest_float("Cat_learning_rate", 0.01, 0.3, log=True),
+                        "iterations": trial.suggest_int("Cat_iterations", 100, 300),
+                        "depth": trial.suggest_int("Cat_depth", 5, 12),
+                        # "l2_leaf_reg": trial.suggest_int("Cat_l2_leaf_reg", 1, 10),
                         # "bagging_temperature": trial.suggest_loguniform("bagging_temperature", 0.01, 1),
                         # "border_count": trial.suggest_int("border_count", 32, 255),
                         "cat_features": ["region", "park"],
                         "task_type": "GPU",
                         "devices": "cuda",
                     }
-                    model = CatBoostRegressor(**params, random_state=42, n_jobs=-1)
+                    model = CatBoostRegressor(**params, random_state=42)
                 case "randomforest":
                     params = {
                         "n_estimators": trial.suggest_int("n_estimators", 50, 300),

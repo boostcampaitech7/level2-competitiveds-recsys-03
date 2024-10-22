@@ -60,7 +60,11 @@ if __name__ == "__main__":
 
     # log 변환
     train_data, test_data = apply_log_transformation(train_data, test_data)
-
+    train_data["contract_year"] = train_data["contract_year_month"] // 100
+    test_data["contract_year"] = train_data["contract_year_month"] // 100
+    train_data["contract_month"] = train_data["contract_year_month"] % 100
+    test_data["contract_month"] = train_data["contract_year_month"] % 100
+    
     # train_data split
     X, y = split_features_and_target(train_data)
     
@@ -71,7 +75,7 @@ if __name__ == "__main__":
     match args.model:
         case "voting":
             models = ["xgboost", "catboost"]
-            best_weights, best_models, mae = voting_train(models, X, y)
+            best_weights, best_models, mae = voting_train(models, X, y, n_trials=300)
             best_model = set_model(model_name="voting", weights=best_weights, models=best_models)
             best_model = best_model.train(X, y["log_deposit"])
             best_params = str(best_models)
