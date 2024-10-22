@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 from sklearn.cluster import KMeans, DBSCAN
 from sklearn.mixture import GaussianMixture
 from sklearn.metrics import silhouette_score
+from tqdm import tqdm
 
 def find_nearest_haversine_distance(
     data: pd.DataFrame, 
@@ -86,6 +87,37 @@ def find_places_within_radius(
     return result_df
 
 
+def apply_log_transformation(train_data, test_data):
+    """
+    학습 데이터와 테스트 데이터에 로그 변환을 적용하는 함수.
+    주로 오른쪽으로 꼬리가 긴 분포를 갖고, 큰 값들을 갖는 변수를 로그 변환하여 데이터 분포를 조정하는 데 사용한다.
+
+    Args:
+        train_data (DataFrame): 학습용 데이터프레임.
+        test_data (DataFrame): 테스트용 데이터프레임.
+
+    Returns:
+        train_data (DataFrame): 로그 변환이 적용된 학습용 데이터프레임.
+        test_data (DataFrame): 로그 변환이 적용된 테스트용 데이터프레임.
+    """
+    #train_data log 변환: 가격, 면적, 지하철, 학교, 공원까지의 최단거리, 대장 아파트까지의 최단거리
+    train_data["log_deposit"] = np.log1p(train_data["deposit"])
+    train_data["log_area_m2"] = np.log1p(train_data["area_m2"])
+    train_data["log_subway_distance"] = np.log1p(train_data["nearest_subway_distance"])
+    train_data["log_school_distance"] = np.log1p(train_data["nearest_school_distance"])
+    train_data["log_park_distance"] = np.log1p(train_data["nearest_park_distance"])
+    train_data["log_leader_distance"] = np.log1p(train_data)["nearest_leader_distance"]
+    
+    #test_data log 변환: 면적, 지하철, 학교, 공원까지의 최단거리, 대장 아파트까지의 최단거리
+    test_data["log_area_m2"] = np.log1p(test_data["area_m2"])
+    test_data["log_subway_distance"] = np.log1p(test_data["nearest_subway_distance"])
+    test_data["log_school_distance"] = np.log1p(test_data["nearest_school_distance"])
+    test_data["log_park_distance"] = np.log1p(test_data["nearest_park_distance"])
+    test_data["log_leader_distance"] = np.log1p(test_data)["nearest_leader_distance"]
+    
+    return train_data, test_data
+
+
 class ClusteringModel:
     def __init__(self, data):
         self.data = data
@@ -93,7 +125,7 @@ class ClusteringModel:
     ### K-means 최적의 클러스터 수 찾는 메서드 ###
     def find_kmeans_n_clusters(self, max_clusters=20):
         wcss = []
-        for i in range(1, max_clusters + 1):
+        for i in tqdm(range(1, max_clusters + 1), desc="Elbow Method 진행 중...⏳"):
             kmeans = KMeans(n_clusters=i, init='k-means++', random_state=42)
             kmeans.fit(self.data)
             wcss.append(kmeans.inertia_)
@@ -127,7 +159,8 @@ class ClusteringModel:
         best_score = -1
 
         eps_values = [0.01, 0.1, 0.2]
-        for eps in eps_values:
+
+        for eps in tqdm(eps_values, desc="Silhouette Score 계산 중...⏳"):
             dbscan = DBSCAN(eps=eps, min_samples=min_samples)
             labels = dbscan.fit_predict(self.data)
 
@@ -145,11 +178,9 @@ class ClusteringModel:
     def dbscan_clustering(self, eps, train_data, test_data, feature_columns, label_column="region", min_samples=5):
         dbscan = DBSCAN(eps=eps, min_samples=min_samples)
         dbscan.fit(self.data)
-
         
         train_data[label_column] = dbscan.fit_predict(train_data[feature_columns])
         test_data[label_column] = dbscan.fit_predict(test_data[feature_columns]) 
-
 
         return dbscan
 
@@ -161,7 +192,7 @@ class ClusteringModel:
 
         n_components_range = range(1, max_clusters + 1)
 
-        for n_components in n_components_range:
+        for n_components in tqdm(n_components_range, desc="BIC, AIC 계산 중...⏳"):
             gmm = GaussianMixture(n_components=n_components, random_state=42)
             gmm.fit(self.data)
 
