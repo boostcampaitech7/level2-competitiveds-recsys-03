@@ -254,9 +254,9 @@ def voting_train(
 
 def stacking_train(
         models: list[str],
+        meta_model: BaseEstimator,
         X: pd.DataFrame,
         y: pd.DataFrame,
-        meta_model: BaseEstimator = LinearRegression(),
         n_trials: int = 50
 ) -> tuple[dict, float]:
     """

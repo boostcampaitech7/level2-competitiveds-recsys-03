@@ -81,9 +81,9 @@ if __name__ == "__main__":
             best_model = best_model.train(X, y["log_deposit"])
             best_params = str(best_models)
         case "stacking":
-            meta_model = LinearRegression()
+            meta_model = LinearRegression() # 메타 모델 설정
             models = ["xgboost", "randomforest"]
-            best_models, mae = stacking_train(models, X, y, n_trials=2)
+            best_models, mae = stacking_train(models, meta_model, X, y, n_trials=50)
             best_model = set_model(model_name="stacking", models=best_models, meta_model=meta_model)
             best_model = best_model.train(X, y["log_deposit"])
             best_params = str(best_models)
