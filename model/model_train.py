@@ -11,7 +11,7 @@ from model.Ensemble import Voting
 import optuna
 RANDOM_SEED = 42
 
-def set_model(model_name: str, params, models: dict[str, Any] = None):
+def set_model(model_name: str, params: Any = None, models: list[tuple[str, Any]] = None, weights: list[float] = None):
     """
     주어진 모델 이름에 따라 모델을 생성하고 반환하는 함수입니다.
 
@@ -29,8 +29,8 @@ def set_model(model_name: str, params, models: dict[str, Any] = None):
             model = LightGBM(**params)
         case "catboost":
             model = CatBoost(**params)
-        case "Voting":
-            model = Voting(models=models, weights=params)
+        case "voting":
+            model = Voting(models=models, weights=weights)
     return model
 
 def cv_train(model, X: pd.DataFrame, y: pd.DataFrame, verbose: bool = True) -> float:
@@ -123,7 +123,7 @@ def optuna_train(
                     "task_type": "GPU",
                     "devices": "cuda",
                 }
-        model = set_model(model_name, **params)
+        model = set_model(model_name=model_name, params=params)
         return cv_train(model, X, y, verbose=False)
     
     sampler = optuna.samplers.TPESampler(seed=42)
@@ -158,30 +158,30 @@ def voting_train(
             match model_name:
                 case "xgboost":
                     params = {
-                        "n_estimators": trial.suggest_int("n_estimators", 50, 300),
-                        "learning_rate": trial.suggest_float("learning_rate", 0.01, 0.2),
-                        "max_depth": trial.suggest_int("max_depth", 5, 12),
-                        "subsample": trial.suggest_float("subsample", 0.5, 1.0),
+                        "n_estimators": trial.suggest_int("XGB_n_estimators", 50, 300),
+                        "learning_rate": trial.suggest_float("XGB_learning_rate", 0.01, 0.2),
+                        "max_depth": trial.suggest_int("XGB_max_depth", 5, 12),
+                        "subsample": trial.suggest_float("XGB_subsample", 0.5, 1.0),
                     }
                     model = XGBRegressor(**params, random_state=42, device="cuda")
                 case "lightgbm":
                     params = {
                         "verbose": -1,
-                        "n_estimators": trial.suggest_int("n_estimators", 50, 300),
-                        "learning_rate": trial.suggest_float("learning_rate", 0.01, 0.3, log=True),
-                        "max_depth": trial.suggest_int("max_depth", 5, 12),
-                        "subsample": trial.suggest_float("subsample", 0.5, 1.0),
-                        "num_leaves": trial.suggest_int("num_leaves", 20, 150),
+                        "n_estimators": trial.suggest_int("LGBM_n_estimators", 50, 300),
+                        "learning_rate": trial.suggest_float("LGBM_learning_rate", 0.01, 0.3, log=True),
+                        "max_depth": trial.suggest_int("LGBM_max_depth", 5, 12),
+                        "subsample": trial.suggest_float("LGBM_subsample", 0.5, 1.0),
+                        "num_leaves": trial.suggest_int("LGBM_num_leaves", 20, 150),
                         "objective": "regression_l1"
                     }
                     model = LGBMRegressor(**params, random_state=42, device="cuda")
                 case "catboost":
                     params = {
                         "verbose": 0,
-                        "learning_rate": trial.suggest_float("learning_rate", 0.01, 0.3),
-                        "iterations": trial.suggest_int("iterations", 50, 500),
-                        "depth": trial.suggest_int("depth", 3, 10),
-                        "l2_leaf_reg": trial.suggest_int("l2_leaf_reg", 1, 10),
+                        "learning_rate": trial.suggest_float("Cat_learning_rate", 0.01, 0.3),
+                        "iterations": trial.suggest_int("Cat_iterations", 50, 500),
+                        "depth": trial.suggest_int("Cat_depth", 3, 10),
+                        "l2_leaf_reg": trial.suggest_int("Cat_l2_leaf_reg", 1, 10),
                         # "bagging_temperature": trial.suggest_loguniform("bagging_temperature", 0.01, 1),
                         # "border_count": trial.suggest_int("border_count", 32, 255),
                         "cat_features": ["contract_day"],
@@ -204,12 +204,17 @@ def voting_train(
             weights = [w / total_weight for w in weights]
         else:
             weights = [1.0 / len(weights)] * len(weights)  # 모든 가중치를 동일하게 설정
-        
-        voting_model = set_model(model_name="Voting", models=model_params, params=weights)
+        voting_model = set_model(model_name="voting", models=model_params, weights=weights)
+
+        trial.set_user_attr("models", model_params)
+        trial.set_user_attr("weights", weights)
         return cv_train(voting_model, X, y, verbose=False)
     
     # 최적화 수행
     sampler = optuna.samplers.TPESampler(seed=42)
     study = optuna.create_study(direction="minimize", sampler=sampler)
     study.optimize(objective, n_trials=n_trials)
-    return study.best_params, study.best_value
+    best_models = study.best_trial.user_attrs["models"]
+    best_weights = study.best_trial.user_attrs["weights"]
+
+    return best_weights, best_models, study.best_value
