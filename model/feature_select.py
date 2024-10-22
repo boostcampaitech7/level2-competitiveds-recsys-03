@@ -29,7 +29,8 @@ def select_features(X, y, test_data):
         # "contract_day",
         "num_of_subways_within_radius",
         # "num_of_schools_within_radius",
-        "num_of_parks_within_radius",
+        # "num_of_parks_within_radius",
+        "park",
         "region",
         # "interest_rate"
     ]

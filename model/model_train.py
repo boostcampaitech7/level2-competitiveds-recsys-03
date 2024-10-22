@@ -192,6 +192,7 @@ def voting_train(
                         "l2_leaf_reg": trial.suggest_int("Cat_l2_leaf_reg", 1, 10),
                         # "bagging_temperature": trial.suggest_loguniform("bagging_temperature", 0.01, 1),
                         # "border_count": trial.suggest_int("border_count", 32, 255),
+                        "cat_features": ["region", "park"],
                         "task_type": "GPU",
                         "devices": "cuda",
                     }
