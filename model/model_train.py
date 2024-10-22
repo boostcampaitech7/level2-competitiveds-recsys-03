@@ -10,9 +10,6 @@ from sklearn.model_selection import KFold
 from model.TreeModel import XGBoost, LightGBM, CatBoost
 from model.Ensemble import Voting
 import optuna
-import optuna.logging
-# Optuna의 기본 로그 출력을 비활성화
-optuna.logging.set_verbosity(optuna.logging.WARNING)
 RANDOM_SEED = 42
 
 def set_model(model_name: str, params: Any = None, models: list[tuple[str, Any]] = None, weights: list[float] = None):
@@ -79,7 +76,7 @@ def cv_train(model, X: pd.DataFrame, y: pd.DataFrame, verbose: bool = True) -> f
         print("### K-fold Result ###")
         print(f"Valid MAE: {mae:.4f}")
     
-    return mae, mae_train
+    return mae
 
 def optuna_train(
         model_name: str,
@@ -139,7 +136,7 @@ def optuna_train(
     
     sampler = optuna.samplers.TPESampler(seed=42)
     study = optuna.create_study(direction="minimize", sampler=sampler)
-    study.optimize(objective, n_trials=n_trials, callbacks=[print_formatted_params])
+    study.optimize(objective, n_trials=n_trials)
     return study.best_params, study.best_value
 
 def voting_train(
@@ -185,7 +182,7 @@ def voting_train(
                         "num_leaves": trial.suggest_int("LGBM_num_leaves", 20, 150),
                         "objective": "regression_l1"
                     }
-                    model = LGBMRegressor(**params, random_state=42, device="cuda")
+                    model = LGBMRegressor(**params, random_state=42, device="cpu")
                 case "catboost":
                     params = {
                         "verbose": 0,
@@ -195,7 +192,6 @@ def voting_train(
                         "l2_leaf_reg": trial.suggest_int("Cat_l2_leaf_reg", 1, 10),
                         # "bagging_temperature": trial.suggest_loguniform("bagging_temperature", 0.01, 1),
                         # "border_count": trial.suggest_int("border_count", 32, 255),
-                        "cat_features": ["contract_day"],
                         "task_type": "GPU",
                         "devices": "cuda",
                     }

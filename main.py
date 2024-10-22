@@ -69,12 +69,12 @@ if __name__ == "__main__":
     
     ### 5. Model Train and Evaulate
     if args.model == "voting":
-        models = ["xgboost", "catboost"]
+        models = ["xgboost", "lightgbm", "catboost"]
         # models = {
         #     "XGBoost": XGBRegressor(n_estimators=249, learning_rate=0.1647758714498898, max_depth=12, subsample=0.9996749158433582, device="cuda", random_state=42),
         #     "CatBoost": CatBoostRegressor(iterations=300, learning_rate=0.1, depth=12, devices="cuda", random_state=42, verbose=0)
         # }
-        best_weights, best_models, mae = voting_train(models, X, y, n_trials=2)
+        best_weights, best_models, mae = voting_train(models, X, y, n_trials=300)
         best_model = set_model(model_name=args.model, weights=best_weights, models=best_models)
         best_model = best_model.train(X, y["log_deposit"])
         best_params = best_models
