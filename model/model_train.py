@@ -1,17 +1,27 @@
 import pandas as pd
 import numpy as np
+from typing import Any
 from xgboost import XGBRegressor
 from lightgbm import LGBMRegressor
 from catboost import CatBoostRegressor
-from typing import Any
+from sklearn.linear_model import LinearRegression
+from sklearn.base import BaseEstimator
 from sklearn.metrics import mean_absolute_error
 from sklearn.model_selection import KFold
 from model.TreeModel import XGBoost, LightGBM, CatBoost
-from model.Ensemble import Voting
+from model.Ensemble import Voting, Stacking
 import optuna
+import warnings
+warnings.filterwarnings("ignore", category=UserWarning)
 RANDOM_SEED = 42
 
-def set_model(model_name: str, params: Any = None, models: list[tuple[str, Any]] = None, weights: list[float] = None):
+def set_model(
+        model_name: str,
+        params: Any = None,
+        models: list[tuple[str, BaseEstimator]] = None,
+        weights: list[float] = None,
+        meta_model: BaseEstimator = None
+    ) -> BaseEstimator:
     """
     주어진 모델 이름에 따라 모델을 생성하고 반환하는 함수입니다.
 
@@ -20,7 +30,7 @@ def set_model(model_name: str, params: Any = None, models: list[tuple[str, Any]]
         params: 모델 생성 시 사용할 하이퍼파라미터
 
     Returns:
-        model (object): 생성된 모델 객체
+        BaseEstimator: 생성된 모델 객체
     """
     match model_name:
         case "xgboost":
@@ -31,6 +41,8 @@ def set_model(model_name: str, params: Any = None, models: list[tuple[str, Any]]
             model = CatBoost(**params)
         case "voting":
             model = Voting(models=models, weights=weights)
+        case "stacking":
+            model = Stacking(models=models, meta_model=meta_model)
     return model
 
 def cv_train(model, X: pd.DataFrame, y: pd.DataFrame, verbose: bool = True) -> float:
@@ -76,7 +88,7 @@ def optuna_train(
         X: pd.DataFrame,
         y: pd.DataFrame,
         n_trials: int = 50
-    ) -> tuple[dict, float]:
+) -> tuple[dict, float]:
     """
     Optuna를 사용하여 주어진 모델의 하이퍼파라미터를 최적화하는 함수입니다.
 
@@ -136,7 +148,7 @@ def voting_train(
         X: pd.DataFrame,
         y: pd.DataFrame,
         n_trials: int = 50
-    ) -> tuple[dict, float]:
+) -> tuple[list[float], dict, float]:
     """
     optuna를 이용한 Voting Regressor 최적화 함수입니다.
 
@@ -147,8 +159,9 @@ def voting_train(
         n_trials (int, optional): optuna 시행 횟수. Defaults to 50.
 
     Returns:
-        tuple[dict, float]: 
-            - dict: 최적의 하이퍼파라미터
+        tuple[list[float], dict, float]:
+            - list[float]: 최적의 보팅 가중치
+            - dict: 각 모델별 최적의 하이퍼파라미터를 담은 딕셔너리
             - float: 최적의 하이퍼파라미터에 대한 성능 지표(MAE)
     """
     def objective(trial):
@@ -185,7 +198,6 @@ def voting_train(
                         # "bagging_temperature": trial.suggest_loguniform("bagging_temperature", 0.01, 1),
                         # "border_count": trial.suggest_int("border_count", 32, 255),
                         "cat_features": ["contract_day"],
-                        "task_type": "GPU",
                         "devices": "cuda",
                     }
                     model = CatBoostRegressor(**params, random_state=42)
@@ -218,3 +230,64 @@ def voting_train(
     best_weights = study.best_trial.user_attrs["weights"]
 
     return best_weights, best_models, study.best_value
+
+def stacking_train(
+        models: list[str],
+        X: pd.DataFrame,
+        y: pd.DataFrame,
+        meta_model: BaseEstimator = LinearRegression(),
+        n_trials: int = 50
+) -> tuple[dict, float]:
+    def objective(trial):
+        model_params = []
+        for model_name in models:
+            # 개별 모델 및 하이퍼파라미터 정의
+            match model_name:
+                case "xgboost":
+                    params = {
+                        "n_estimators": trial.suggest_int("XGB_n_estimators", 50, 300),
+                        "learning_rate": trial.suggest_float("XGB_learning_rate", 0.01, 0.2),
+                        "max_depth": trial.suggest_int("XGB_max_depth", 5, 12),
+                        "subsample": trial.suggest_float("XGB_subsample", 0.5, 1.0),
+                    }
+                    model = XGBRegressor(**params, random_state=42, device="cuda")
+                case "lightgbm":
+                    params = {
+                        "verbose": -1,
+                        "n_estimators": trial.suggest_int("LGBM_n_estimators", 50, 300),
+                        "learning_rate": trial.suggest_float("LGBM_learning_rate", 0.01, 0.3, log=True),
+                        "max_depth": trial.suggest_int("LGBM_max_depth", 5, 12),
+                        "subsample": trial.suggest_float("LGBM_subsample", 0.5, 1.0),
+                        "num_leaves": trial.suggest_int("LGBM_num_leaves", 20, 150),
+                        "objective": "regression_l1"
+                    }
+                    model = LGBMRegressor(**params, random_state=42, device="cuda")
+                case "catboost":
+                    params = {
+                        "verbose": 0,
+                        "learning_rate": trial.suggest_float("Cat_learning_rate", 0.01, 0.3),
+                        "iterations": trial.suggest_int("Cat_iterations", 50, 500),
+                        "depth": trial.suggest_int("Cat_depth", 3, 10),
+                        "l2_leaf_reg": trial.suggest_int("Cat_l2_leaf_reg", 1, 10),
+                        # "bagging_temperature": trial.suggest_loguniform("bagging_temperature", 0.01, 1),
+                        # "border_count": trial.suggest_int("border_count", 32, 255),
+                        "cat_features": ["contract_day"],
+                        "devices": "cuda",
+                    }
+                    model = CatBoostRegressor(**params, random_state=42)
+            # 통합 모델 정의
+            model_params.append((model_name, model))
+
+        # 스태킹 모델
+        stacking_model = set_model(model_name="stacking", models=model_params, meta_model=meta_model)
+
+        trial.set_user_attr("models", model_params)
+        return cv_train(stacking_model, X, y, verbose=False)
+    
+    # 최적화 수행
+    sampler = optuna.samplers.TPESampler(seed=42)
+    study = optuna.create_study(direction="minimize", sampler=sampler)
+    study.optimize(objective, n_trials=n_trials)
+    best_models = study.best_trial.user_attrs["models"]
+
+    return best_models, study.best_value
