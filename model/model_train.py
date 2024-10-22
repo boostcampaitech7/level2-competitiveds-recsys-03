@@ -28,6 +28,9 @@ def set_model(
     Args:
         model_name (str): 생성하려는 모델 이름
         params: 모델 생성 시 사용할 하이퍼파라미터
+        models (list[tuple[str, BaseEstimator]]): (앙상블) 앙상블을 수행할 모델
+        weights (list[float]): (보팅) 보팅 가중치 배열
+        meta model (BaseEstimator): (스태킹) 메타 모델
 
     Returns:
         BaseEstimator: 생성된 모델 객체
@@ -238,6 +241,21 @@ def stacking_train(
         meta_model: BaseEstimator = LinearRegression(),
         n_trials: int = 50
 ) -> tuple[dict, float]:
+    """
+    optuna를 이용한 Stacking Regressor 최적화 함수입니다.
+
+    Args:
+        models (list[str]): 앙상블을 수행할 모델의 리스트
+        X (pd.DataFrame): 독립 변수
+        y (pd.DataFrame): 예측 변수
+        meta_model (BaseEstimator, optional): 메타 모델. Defaults to LinearRegression().
+        n_trials (int, optional): optuna의 trial 횟수. Defaults to 50.
+
+    Returns:
+        tuple[dict, float]:
+            - dict: 최적의 하이퍼파라미터
+            - float: 최적의 하이퍼파라미터에 대한 성능 지표(MAE)
+    """
     def objective(trial):
         model_params = []
         for model_name in models:
@@ -278,7 +296,7 @@ def stacking_train(
             # 통합 모델 정의
             model_params.append((model_name, model))
 
-        # 스태킹 모델
+        # 스태킹 모델 정의
         stacking_model = set_model(model_name="stacking", models=model_params, meta_model=meta_model)
 
         trial.set_user_attr("models", model_params)
