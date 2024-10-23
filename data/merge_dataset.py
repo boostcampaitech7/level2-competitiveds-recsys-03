@@ -128,9 +128,9 @@ def merge_dataset(
     
     ### 최단거리 지하철, 학교, 공원 개수 변수: subway_data, school_data, park_data에서 각각 위도와 경도로 그룹화하여 개수 세기 ###
     # 개수를 센 데이터를 subway_count, school_count, park_count로 반환
-    subway_count: pd.DataFrame = subway_data.groupby(["latitude", "longitude"]).size().reset_index(name='nearest_subway_num')
-    school_count: pd.DataFrame = school_data.groupby(["latitude", "longitude"]).size().reset_index(name='nearest_school_num')
-    park_count: pd.DataFrame = new_park_data.groupby(["latitude", "longitude"]).size().reset_index(name='nearest_park_num')
+    subway_count: pd.DataFrame = subway_data.groupby(["latitude", "longitude"]).size().reset_index(name="nearest_subway_num")
+    school_count: pd.DataFrame = school_data.groupby(["latitude", "longitude"]).size().reset_index(name="nearest_school_num")
+    park_count: pd.DataFrame = new_park_data.groupby(["latitude", "longitude"]).size().reset_index(name="nearest_park_num")
 
     # train_data에 최단거리 지하철의 위도, 경도에 대한 지하철 개수 정보 추가
     train_data: pd.DataFrame = pd.merge(train_data, subway_count, 
@@ -248,8 +248,8 @@ def merge_dataset(
 
 
     ### 공원 근접성 유무 변수: 1000m 반경 이내 100,000 제곱미터 이상인 공원이 있으면 1, 아니면 0인 변수
-    train_data['park'] = train_data['num_of_parks_within_radius'].apply(lambda x: 1 if x != 0 else 0)
-    test_data['park'] = test_data['num_of_parks_within_radius'].apply(lambda x: 1 if x != 0 else 0)
+    train_data["park_exists"] = train_data["num_of_parks_within_radius"].apply(lambda x: 1 if x != 0 else 0)
+    test_data["park_exists"] = test_data["num_of_parks_within_radius"].apply(lambda x: 1 if x != 0 else 0)
 
 
     ### 클러스터링 변수: kmeans_clustering 활용 ###
@@ -268,6 +268,15 @@ def merge_dataset(
 						          feature_columns,
 							      label_column="region"
     )
+
+
+    ### 클러스터별 평균 전세가 변수
+    average_prices_by_region = train_data.groupby("region")["deposit"].mean().reset_index()
+    average_prices_by_region.columns = ["region", "region_mean"]
+
+    # train_data와 test_data에 average_prices_by_region 병합 (test에는 train의 평균가격이 병합된다.)
+    train_data = pd.merge(train_data, average_prices_by_region, on="region", how="left")
+    test_data = pd.merge(test_data, average_prices_by_region, on="region", how="left")
 
 
     ### 건물-대장 아파트 최단거리 변수: find_nearest_haversine_distance 활용 ###
