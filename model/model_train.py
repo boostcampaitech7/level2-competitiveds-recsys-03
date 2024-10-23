@@ -51,25 +51,29 @@ def set_model(
             model = Stacking(models=models, meta_model=meta_model)
     return model
 
-def cv_train(model, X: pd.DataFrame, y: pd.DataFrame, verbose: bool = True) -> float:
+def cv_train(model, X: pd.DataFrame, y: pd.DataFrame, cut_index: list[float] = None, verbose: bool = True) -> float:
     """
     K-Fold를 이용하여 Cross Validation을 수행하는 함수입니다.
 
     Args:
-        model: 수행하려는 모델
+        model (object): 수행하려는 모델
         X (pd.DataFrame): 독립 변수
         y (pd.DataFrame): 예측 변수. deposit과 log_deposit 열로 나뉨.
+        cut_index (list[float], optional): urgent_sale_cut함수를 통해서 얻은 index 리스트. Defaults to None.
         verbose (bool, optional): Fold별 진행상황을 출력할지 여부. Defaults to True.
-
+        
     Returns:
         float: 평균 MAE
     """
+
     cv = 5
     kfold = KFold(n_splits=cv, shuffle=True, random_state=42)
 
     mae_list = []
     for i, (train_idx, valid_idx) in enumerate(kfold.split(X, y), start=1):
         if verbose: print(f"training...[{i}/{cv}]")
+        if cut_index != None:
+            train_idx = train_idx[~np.isin(train_idx, cut_index)]
 
         X_train, y_train = X.loc[train_idx, :], y.loc[train_idx, "log_deposit"]
         X_valid, y_valid = X.loc[valid_idx, :], y.loc[valid_idx, "deposit"]

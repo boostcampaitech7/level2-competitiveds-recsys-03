@@ -3,6 +3,7 @@ from lightgbm import LGBMRegressor
 from catboost import CatBoostRegressor
 from data.load_dataset import load_dataset
 from data.merge_dataset import merge_dataset
+from data.data_preprocessing import *
 from data.feature_engineering import *
 from model.inference import save_csv
 from model.feature_select import select_features
@@ -46,7 +47,11 @@ if __name__ == "__main__":
     # 기존 데이터에 새로운 feature들을 병합한 데이터프레임 불러오기
     train_data, test_data = merge_dataset(train_data, test_data, interest_data, subway_data, school_data, park_data)
     
+
     ### 3. Data Preprocessing
+
+    # urgent_sale_cut 사용시 필요한 예시 코드
+    # cut_index = urgent_sale_cut(train_data, 2.5)
 
     # 위치 중복도 낮은 행 삭제
     groups = train_data.groupby(["latitude", "longitude"])["index"].count()
@@ -102,6 +107,7 @@ if __name__ == "__main__":
 
                 best_model = set_model(args.model, best_params)
                 mae = cv_train(best_model, X, y)
+                # mae = cv_train(best_model, X, y, cut_index) # urgent_sale_cut 사용시 필요한 예시 코드
 
     ### 6. WandB Log and Finish
 
