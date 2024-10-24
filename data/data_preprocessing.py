@@ -1,5 +1,6 @@
 import pandas as pd
 from typing import Union
+from sklearn.experimental import enable_iterative_imputer
 from sklearn.impute import IterativeImputer, KNNImputer
 
 ### 이상치 탐지 함수 ###
