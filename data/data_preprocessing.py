@@ -149,3 +149,42 @@ class MissingValueImputer:
         imputed_df = pd.DataFrame(df_imputed_array, columns=numeric_cols)
         df[numeric_cols] = imputed_df.values
         return df
+
+
+### 급처매물 제거 함수 ###
+def urgent_sale_cut(data: pd.DataFrame, sigma_weight: float) -> list[float]:
+    """
+    train_data에서 위도, 경도를 그룹화 하여 그룹별 가격에 대한 급처매물을 제거하는 함수
+
+    Args:
+        data (pd.DataFrame): 무조건 merge_dataset()함수를 통해서 불러온 train_data를 넣을 것
+        sigma_weight (float): 표준편차에 대한 가중치
+
+    Returns:
+        list[float]: train_data에서 급처매물인 index의 list 반환
+    """
+
+    grouped = data.groupby(["latitude", "longitude"])
+    grouped_indices = grouped.groups
+    value_list = list(grouped_indices.values())
+
+    # 결과를 저장할 리스트
+    filtered_data_list = []
+
+    # 각 그룹에 대해 평균과 표준편차 계산 후 필터링
+    for i in range(len(value_list)):
+        indices = value_list[i]
+
+        # 해당 그룹의 deposit 값으로 mean과 std 계산
+        key_mean = data.loc[indices]["deposit"].mean()
+        key_std = data.loc[indices]["deposit"].std()
+        key_benchmark = key_mean - sigma_weight * key_std
+
+        # 조건을 만족하는 행을 필터링하여 리스트에 추가
+        filtered_data = data.loc[indices]
+
+        # 조건을 만족하는 행의 index 값을 가져와서 리스트에 추가
+        filtered_indices = filtered_data[filtered_data["deposit"] < key_benchmark].index
+        filtered_data_list.extend(filtered_indices.tolist())
+        
+    return filtered_data_list
