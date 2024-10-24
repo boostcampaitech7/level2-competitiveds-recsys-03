@@ -24,6 +24,7 @@ def merge_dataset(
     Returns:
         Union[pd.DataFrame, pd.DataFrame]: 병합된 학습(훈련) 데이터프레임, 병합된 테스트 데이터프레임 
     """
+    
     ### 금리: 계약 연월 기준으로 interest_data를 train_data로 병합 ###
     train_data: pd.DataFrame = pd.merge(train_data, interest_data, left_on="contract_year_month", right_on="year_month", how="left")
     train_data: pd.DataFrame = train_data.drop(columns=["year_month"])
@@ -254,14 +255,14 @@ def merge_dataset(
 
     ### 클러스터링 변수: kmeans_clustering 활용 ###
     # 클러스터링 학습에 사용할 feature 선택
-    feature_columns = ["latitude",	"longitude"]
-    coords = train_data[feature_columns]
+    feature_columns: list[str] = ["latitude", "longitude"]
+    coords: pd.DataFrame = train_data[feature_columns]
 
     # 클러스터링 객체 생성
     cm = ClusteringModel(data=coords)
 
     # 클러스터 개수(k) 설정
-    n_clusters = 30
+    n_clusters: int = 30
     
     # k-means 클러스터링 수행 후 train_data, test_data에 region 변수 추가
     kmeans = cm.kmeans_clustering(n_clusters, train_data, test_data, 
@@ -271,27 +272,27 @@ def merge_dataset(
 
 
     ### 클러스터별 평균 전세가 변수
-    average_prices_by_region = train_data.groupby("region")["deposit"].mean().reset_index()
+    average_prices_by_region: pd.DataFrame = train_data.groupby("region")["deposit"].mean().reset_index()
     average_prices_by_region.columns = ["region", "region_mean"]
 
     # train_data와 test_data에 average_prices_by_region 병합 (test에는 train의 평균가격이 병합된다.)
-    train_data = pd.merge(train_data, average_prices_by_region, on="region", how="left")
-    test_data = pd.merge(test_data, average_prices_by_region, on="region", how="left")
+    train_data: pd.DataFrame = pd.merge(train_data, average_prices_by_region, on="region", how="left")
+    test_data: pd.DataFrame = pd.merge(test_data, average_prices_by_region, on="region", how="left")
 
 
     ### 건물-대장 아파트 최단거리 변수: find_nearest_haversine_distance 활용 ###
     # train_data 대장 아파트 데이터프레임 생성
-    max_deposits = train_data.groupby(["region"])["deposit"].max()
+    max_deposits: pd.DataFrame = train_data.groupby(["region"])["deposit"].max()
     leader_train_data = pd.DataFrame()
 
     for i in max_deposits.index:
-        tmp = train_data[
+        tmp: pd.DataFrame = train_data[
               (train_data["region"] == i) 
             & (train_data["deposit"] == max_deposits[i])
         ][["region", "deposit", "latitude", "longitude"]] 
-        leader_train_data = pd.concat([leader_train_data, tmp], axis=0, ignore_index=True)
+        leader_train_data: pd.DataFrame = pd.concat([leader_train_data, tmp], axis=0, ignore_index=True)
 
-    leader_train_data = leader_train_data.drop_duplicates().reset_index(drop=True) # 위도, 경도 중복 제거
+    leader_train_data: pd.DataFrame = leader_train_data.drop_duplicates().reset_index(drop=True) # 위도, 경도 중복 제거
     
     # train_data에 대장 아파트 최단거리 추가
     merged_df: pd.DataFrame = find_nearest_haversine_distance(unique_loc_train, leader_train_data)
