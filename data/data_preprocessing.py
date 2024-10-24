@@ -81,12 +81,20 @@ class MissingValueImputer:
             Union[pd.DataFrame, pd.Series]: imputer한 DataFrame 또는 Series 반환
         """
 
+        # df가 pandas DataFrame인지 확인
         if isinstance(df, pd.DataFrame):
+            # 숫자형 데이터 열을 선택하여 리스트로 변환
             numeric_cols = df.select_dtypes(include=["number"]).columns.tolist()
+    
+            # 선택한 숫자형 열의 결측값을 각 열의 평균값으로 대체
             df[numeric_cols] = df[numeric_cols].fillna(df[numeric_cols].mean())
-            return df 
-               
-        elif isinstance(df, pd.Series):
+    
+            # 결측값이 대체된 데이터프레임 반환
+            return df
+
+        # df가 DataFrame이 아닐 경우
+        else:
+            # 결측값을 평균값으로 대체하고 반환
             return df.fillna(df.mean())
 
 
@@ -102,13 +110,22 @@ class MissingValueImputer:
             Union[pd.DataFrame, pd.Series]: imputer한 DataFrame 또는 Series 반환
         """
 
-        if isinstance(df, pd.DataFrame):
-            numeric_cols = df.select_dtypes(include=["number"]).columns.tolist()
-            df[numeric_cols] = df[numeric_cols].fillna(df[numeric_cols].median())
-            return df
         
-        elif isinstance(df, pd.Series):
-            return df.fillna(df.median())
+        # df가 pandas DataFrame인지 확인
+        if isinstance(df, pd.DataFrame):        
+            # 숫자형 데이터 열을 선택하여 리스트로 변환
+            numeric_cols = df.select_dtypes(include=["number"]).columns.tolist()
+    
+            # 선택한 숫자형 열의 결측값을 각 열의 중앙값으로 대체
+            df[numeric_cols] = df[numeric_cols].fillna(df[numeric_cols].median())
+    
+            # 결측값이 대체된 데이터프레임 반환
+            return df
+
+        # df가 DataFrame이 아닐 경우
+        else:
+            # 결측값을 중앙값으로 대체하고 반환
+           return df.fillna(df.median())    
 
 
     ### Iterative방법을 사용한 보간 함수 ###
@@ -123,11 +140,22 @@ class MissingValueImputer:
             pd.DataFrame: imputer한 DataFrame 반환
         """
 
+        # 숫자형 데이터 열을 선택하여 리스트로 변환
         numeric_cols = df.select_dtypes(include=["number"]).columns.tolist()
+
+        # IterativeImputer 클래스 불러오기
         imputer = IterativeImputer()
+
+        # 선택한 숫자형 열에 대해 IterativeImputer를 적용하여 결측값을 대체
         df_imputed_array = imputer.fit_transform(df[numeric_cols])
+
+        # 대체된 데이터를 데이터프레임으로 변환
         imputed_df = pd.DataFrame(df_imputed_array, columns=numeric_cols)
+
+        # 원본 데이터프레임의 숫자형 열에 대체된 값으로 업데이트
         df[numeric_cols] = imputed_df.values
+
+        # 결측값이 대체된 데이터프레임 반환
         return df
 
 
@@ -143,12 +171,24 @@ class MissingValueImputer:
             pd.DataFrame: imputer한 DataFrame 반환
         """
 
+        # 숫자형 데이터 열을 선택하여 리스트로 변환
         numeric_cols = df.select_dtypes(include=["number"]).columns.tolist()
+
+        # KNNImputer 클래스 불러오기
         imputer = KNNImputer()
+
+        # 선택한 숫자형 열에 대해 KNNImputer를 적용하여 결측값을 대체
         df_imputed_array = imputer.fit_transform(df[numeric_cols])
+
+        # 대체된 데이터를 데이터프레임으로 변환
         imputed_df = pd.DataFrame(df_imputed_array, columns=numeric_cols)
+
+        # 원본 데이터프레임의 숫자형 열에 대체된 값으로 업데이트
         df[numeric_cols] = imputed_df.values
+
+        # 결측값이 대체된 데이터프레임 반환
         return df
+
 
 
 ### 급처매물 제거 함수 ###
