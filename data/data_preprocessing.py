@@ -14,7 +14,6 @@ def outlier_detection(data: pd.Series) -> pd.Series:
     Returns:
         pd.Series: 이상치에 해당하는 데이터 Series 반환
     """
-
     # IQR 계산 
     Q1 = data.quantile(0.25)
     Q3 = data.quantile(0.75) 
@@ -46,7 +45,6 @@ def delete_low_density(
     Returns:
         pd.DataFrame: 선택할 구간에 포함하는 위치 중복도를 갖는 데이터를 선택 또는 삭제 후 데이터프레임 반환
     """
-
     # 위도, 경도 그룹별 개수 카운트
     group = data.groupby(["latitude", "longitude"])["index"].count()
     
@@ -86,7 +84,6 @@ class MissingValueImputer:
         Returns:
             Union[pd.DataFrame, pd.Series]: imputer한 DataFrame 또는 Series 반환
         """
-
         # df가 pandas DataFrame인지 확인
         if isinstance(df, pd.DataFrame):
             # 숫자형 데이터 열을 선택하여 리스트로 변환
@@ -114,9 +111,7 @@ class MissingValueImputer:
 
         Returns:
             Union[pd.DataFrame, pd.Series]: imputer한 DataFrame 또는 Series 반환
-        """
-
-        
+        """        
         # df가 pandas DataFrame인지 확인
         if isinstance(df, pd.DataFrame):        
             # 숫자형 데이터 열을 선택하여 리스트로 변환
@@ -145,7 +140,6 @@ class MissingValueImputer:
         Returns:
             pd.DataFrame: imputer한 DataFrame 반환
         """
-
         # 숫자형 데이터 열을 선택하여 리스트로 변환
         numeric_cols = df.select_dtypes(include=["number"]).columns.tolist()
 
@@ -176,7 +170,6 @@ class MissingValueImputer:
         Returns:
             pd.DataFrame: imputer한 DataFrame 반환
         """
-
         # 숫자형 데이터 열을 선택하여 리스트로 변환
         numeric_cols = df.select_dtypes(include=["number"]).columns.tolist()
 
@@ -209,7 +202,6 @@ def urgent_sale_cut(data: pd.DataFrame, sigma_weight: float) -> list[int]:
     Returns:
         list[float]: train_data에서 급처매물인 index의 list 반환
     """
-
     # 위도, 경도를 그룹별로 묶어 데이터프레임 생성
     grouped = data.groupby(["latitude", "longitude"])
     grouped_indices = grouped.groups

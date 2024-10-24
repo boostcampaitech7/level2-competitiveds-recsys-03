@@ -24,7 +24,6 @@ def merge_dataset(
     Returns:
         Union[pd.DataFrame, pd.DataFrame]: 병합된 학습(훈련) 데이터프레임, 병합된 테스트 데이터프레임 
     """
-    
     ### 금리: 계약 연월 기준으로 interest_data를 train_data로 병합 ###
     train_data: pd.DataFrame = pd.merge(train_data, interest_data, left_on="contract_year_month", right_on="year_month", how="left")
     train_data: pd.DataFrame = train_data.drop(columns=["year_month"])
@@ -90,17 +89,18 @@ def merge_dataset(
     radius_meter: int = 1000 # 탐색하려는 반경(단위: 미터)
     earth_radius_meter: int = 6371000 # 지구의 반경(단위: 미터)
     extend_radian: float = radius_meter / earth_radius_meter # 선택하려는 위도, 경도 범위에서 탐색하고자 하는 반경만큼 범위 확장(단위: 라디안)
-    criterion = 100000 # 도시지역권 근린공원 면적 기준
+    criterion: int = 100000 # 도시지역권 근린공원 면적 기준
 
+    # 공원 데이터를 train_data의 위도, 경도의 최소-최대 범위 안으로 들어오게 필터링
     new_park_data: pd.DataFrame = park_data[
           (park_data["latitude"] >= (train_data["latitude"].min() - extend_radian))
         & (park_data["latitude"] <= (train_data["latitude"].max() + extend_radian))
         & (park_data["longitude"] >= (train_data["longitude"].min() - extend_radian))
         & (park_data["longitude"] <= (train_data["longitude"].max() + extend_radian))
     ]
-    new_park_data = new_park_data.drop_duplicates().reset_index(drop=True) # 중복값 16개 drop
-    new_park_data = new_park_data[new_park_data["area"] > criterion] # 공원 면적이 100,000 제곱미터 이상만 고려
-    new_park_data = new_park_data.reset_index(drop=True)
+    new_park_data: pd.DataFrame = new_park_data.drop_duplicates().reset_index(drop=True) # 중복값 16개 drop
+    new_park_data: pd.DataFrame = new_park_data[new_park_data["area"] > criterion] # 공원 면적이 100,000 제곱미터 이상만 고려
+    new_park_data: pd.DataFrame = new_park_data.reset_index(drop=True)
     
     # train_data에 최단거리 공원 정보 추가 (조건: 공원 면적이 100,000 제곱미터 이상인 공원들만 생각)
     merged_df: pd.DataFrame = find_nearest_haversine_distance(unique_loc_train, new_park_data)
@@ -129,9 +129,9 @@ def merge_dataset(
     
     ### 최단거리 지하철, 학교, 공원 개수 변수: subway_data, school_data, park_data에서 각각 위도와 경도로 그룹화하여 개수 세기 ###
     # 개수를 센 데이터를 subway_count, school_count, park_count로 반환
-    subway_count: pd.DataFrame = subway_data.groupby(["latitude", "longitude"]).size().reset_index(name="nearest_subway_num")
-    school_count: pd.DataFrame = school_data.groupby(["latitude", "longitude"]).size().reset_index(name="nearest_school_num")
-    park_count: pd.DataFrame = new_park_data.groupby(["latitude", "longitude"]).size().reset_index(name="nearest_park_num")
+    subway_count = subway_data.groupby(["latitude", "longitude"]).size().reset_index(name="nearest_subway_num")
+    school_count = school_data.groupby(["latitude", "longitude"]).size().reset_index(name="nearest_school_num")
+    park_count = new_park_data.groupby(["latitude", "longitude"]).size().reset_index(name="nearest_park_num")
 
     # train_data에 최단거리 지하철의 위도, 경도에 대한 지하철 개수 정보 추가
     train_data: pd.DataFrame = pd.merge(train_data, subway_count, 
@@ -216,7 +216,7 @@ def merge_dataset(
     # subway_data, school_data, new_park_data에서 위도, 경도 중복 행을 제외하고 추출 (new_park_data에서 미리 중복도 제거)
     unique_loc_subway: pd.DataFrame = subway_data[["latitude", "longitude"]].drop_duplicates().reset_index(drop=True) # 같은 역이 다른 노선을 지나면 중복해서 카운트하므로 제거
     unique_loc_school: pd.DataFrame = school_data[["latitude", "longitude"]].drop_duplicates().reset_index(drop=True)
-
+    
     # train_data에 700m 반경 이내 지하철 역 개수 정보 추가
     merged_df: pd.DataFrame = find_places_within_radius(unique_loc_train, unique_loc_subway, 700)
     train_data: pd.DataFrame = pd.merge(train_data, merged_df, on=["latitude", "longitude"], how="left")
@@ -272,7 +272,7 @@ def merge_dataset(
 
 
     ### 클러스터별 평균 전세가 변수
-    average_prices_by_region: pd.DataFrame = train_data.groupby("region")["deposit"].mean().reset_index()
+    average_prices_by_region = train_data.groupby("region")["deposit"].mean().reset_index()
     average_prices_by_region.columns = ["region", "region_mean"]
 
     # train_data와 test_data에 average_prices_by_region 병합 (test에는 train의 평균가격이 병합된다.)
@@ -282,7 +282,7 @@ def merge_dataset(
 
     ### 건물-대장 아파트 최단거리 변수: find_nearest_haversine_distance 활용 ###
     # train_data 대장 아파트 데이터프레임 생성
-    max_deposits: pd.DataFrame = train_data.groupby(["region"])["deposit"].max()
+    max_deposits = train_data.groupby(["region"])["deposit"].max()
     leader_train_data = pd.DataFrame()
 
     for i in max_deposits.index:
@@ -290,6 +290,7 @@ def merge_dataset(
               (train_data["region"] == i) 
             & (train_data["deposit"] == max_deposits[i])
         ][["region", "deposit", "latitude", "longitude"]] 
+        
         leader_train_data: pd.DataFrame = pd.concat([leader_train_data, tmp], axis=0, ignore_index=True)
 
     leader_train_data: pd.DataFrame = leader_train_data.drop_duplicates().reset_index(drop=True) # 위도, 경도 중복 제거
