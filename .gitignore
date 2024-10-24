@@ -3,3 +3,4 @@ __pycache__/
 *.csv
 wandb/
 catboost_info/
+*.pth
