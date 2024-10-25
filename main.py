@@ -1,6 +1,3 @@
-from xgboost import XGBRegressor
-from lightgbm import LGBMRegressor
-from catboost import CatBoostRegressor
 from data.load_dataset import load_dataset
 from data.merge_dataset import merge_dataset
 from data.data_preprocessing import *
@@ -54,13 +51,7 @@ if __name__ == "__main__":
     # cut_index = urgent_sale_cut(train_data, 2.5)
 
     # 위치 중복도 낮은 행 삭제
-    groups = train_data.groupby(["latitude", "longitude"])["index"].count()
-    conditioned_groups_index = groups[(groups >= 2) & (groups <= 5)].index # 이 범위를 파라미터로 조정하는걸로
-    small_groups = train_data[
-        train_data["latitude"].isin(conditioned_groups_index.get_level_values(0)) &
-        train_data["longitude"].isin(conditioned_groups_index.get_level_values(1))
-    ]
-    train_data.drop(small_groups.index, axis=0, inplace=True)
+    train_data = delete_low_density(train_data, 2, 5)
     
     # built_year > 2024 행 삭제
     train_data = train_data[train_data["built_year"] < 2024]
@@ -75,20 +66,20 @@ if __name__ == "__main__":
     X, y = split_features_and_target(train_data, target=["deposit", "log_deposit"])
     
     # Feature Select
-    X, test_data = select_features(X, y, test_data)
+    X, test_data = select_features(X, test_data)
     
     ### 5. Model Train and Evaulate
     match args.model:
         case "voting":
-            models = ["xgboost", "catboost"]
+            models = ["xgboost", "catboost"] # 보팅 기본 모델 설정
             best_weights, best_models, mae = voting_train(models, X, y)
             best_model = set_model(model_name="voting", weights=best_weights, models=best_models)
             best_model = best_model.train(X, y["log_deposit"])
             best_params = str(best_models)
         case "stacking":
             meta_model = LinearRegression() # 메타 모델 설정
-            models = ["xgboost", "randomforest"]
-            best_models, mae = stacking_train(models, meta_model, X, y, n_trials=50)
+            models = ["xgboost", "randomforest"] # 스태킹 기본 모델 설정
+            best_models, mae = stacking_train(models, meta_model, X, y)
             best_model = set_model(model_name="stacking", models=best_models, meta_model=meta_model)
             best_model = best_model.train(X, y["log_deposit"])
             best_params = str(best_models)

@@ -1,19 +1,20 @@
 from sklearn.feature_selection import SelectKBest, f_regression, RFE
-import xgboost as xgb
 from sklearn.linear_model import Lasso
+import pandas as pd
+import xgboost as xgb
 
-def select_features(X, y, test_data):
+def select_features(train_data: pd.DataFrame, test_data: pd.DataFrame):
     """
     학습 데이터와 테스트 데이터에서 사용할 피처(컬럼)를 선택하는 함수.
 
     Args:
-        train_data (DataFrame): 학습에 사용할 데이터프레임.
-        test_data (DataFrame): 테스트에 사용할 데이터프레임.
+        train_data (pd.DataFrame): 학습에 사용할 데이터프레임.
+        test_data (pd.DataFrame): 테스트에 사용할 데이터프레임.
 
     Returns:
         tuple:
-            - train_data_selected (DataFrame): 선택된 피처들로 구성된 학습 데이터.
-            - test_data_selected (DataFrame): 선택된 피처들로 구성된 테스트 데이터.
+            - train_data_selected (pd.DataFrame): 선택된 피처들로 구성된 학습 데이터.
+            - test_data_selected (pd.DataFrame): 선택된 피처들로 구성된 테스트 데이터.
     """
 
     selected_cols = [
@@ -21,19 +22,22 @@ def select_features(X, y, test_data):
         "built_year",
         "latitude",
         "longitude",
+        "log_leader_distance",
         "log_subway_distance",
         "log_school_distance",
         "log_park_distance",
         "contract_year_month",
-        "contract_day",
-        #"num_of_subways_within_radius",
+        # "contract_day",
+        "num_of_subways_within_radius",
+        "park",
+        "region"
     ]
 
     # selected_cols = select_kbest(X[selected_cols], y, "log_deposit")
     # selected_cols = select_rfe(X[selected_cols], y, "log_deposit", model_type="lasso")
 
     # 피처 선택
-    X_selected = X[selected_cols]
+    X_selected = train_data[selected_cols]
     test_data_selected = test_data[selected_cols]
 
     return X_selected, test_data_selected

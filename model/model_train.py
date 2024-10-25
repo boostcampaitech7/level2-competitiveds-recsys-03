@@ -5,10 +5,9 @@ from xgboost import XGBRegressor
 from lightgbm import LGBMRegressor
 from catboost import CatBoostRegressor
 from sklearn.ensemble import RandomForestRegressor
-from sklearn.linear_model import LinearRegression
 from sklearn.base import BaseEstimator
-from sklearn.metrics import mean_absolute_error, log_loss
-from sklearn.model_selection import KFold, train_test_split
+from sklearn.metrics import mean_absolute_error
+from sklearn.model_selection import KFold
 from model.TreeModel import XGBoost, LightGBM, CatBoost, RandomForest
 from model.Ensemble import Voting, Stacking
 import optuna
@@ -28,7 +27,7 @@ def set_model(
 
     Args:
         model_name (str): 생성하려는 모델 이름
-        params: 모델 생성 시 사용할 하이퍼파라미터
+        params (object): 모델 생성 시 사용할 하이퍼파라미터
         models (list[tuple[str, BaseEstimator]]): (앙상블) 앙상블을 수행할 모델
         weights (list[float]): (보팅) 보팅 가중치 배열
         meta model (BaseEstimator): (스태킹) 메타 모델
@@ -51,7 +50,7 @@ def set_model(
             model = Stacking(models=models, meta_model=meta_model)
     return model
 
-def cv_train(model, X: pd.DataFrame, y: pd.DataFrame, cut_index: list[float] = None, verbose: bool = True) -> float:
+def cv_train(model: Any, X: pd.DataFrame, y: pd.DataFrame, cut_index: list[float] = None, verbose: bool = True) -> float:
     """
     K-Fold를 이용하여 Cross Validation을 수행하는 함수입니다.
 
