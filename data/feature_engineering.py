@@ -8,7 +8,11 @@ from sklearn.metrics import silhouette_score
 from tqdm import tqdm
 from typing import Union
 
-def find_nearest_haversine_distance(data: pd.DataFrame, loc_data: pd.DataFrame) -> pd.DataFrame:
+
+def find_nearest_haversine_distance(
+    data: pd.DataFrame, 
+    loc_data: pd.DataFrame
+) -> pd.DataFrame:
     """
     건물과 지하철/학교/공원 사이의 최단 haversine 거리와 위치 정보를 반환하는 함수
 
@@ -44,7 +48,12 @@ def find_nearest_haversine_distance(data: pd.DataFrame, loc_data: pd.DataFrame) 
     return result_df
 
 
-def find_places_within_radius(data: pd.DataFrame, loc_data: pd.DataFrame, radius_meter: int) -> pd.DataFrame:
+
+def find_places_within_radius(
+		data: pd.DataFrame,
+		loc_data: pd.DataFrame,
+		radius_meter: int
+) -> pd.DataFrame:
     """
     특정 반경 이내 공공장소의 개수와 위치 정보를 반환하는 함수
 
@@ -81,7 +90,9 @@ def find_places_within_radius(data: pd.DataFrame, loc_data: pd.DataFrame, radius
     return result_df
 
 
+
 def apply_log_transformation(train_data: pd.DataFrame, test_data: pd.DataFrame) -> Union[pd.DataFrame, pd.DataFrame]:
+
     """
     학습 데이터와 테스트 데이터에 로그 변환을 적용하는 함수.
     주로 오른쪽으로 꼬리가 긴 분포를 갖고, 큰 값들을 갖는 변수를 로그 변환하여 데이터 분포를 조정하는 데 사용한다.
@@ -92,6 +103,7 @@ def apply_log_transformation(train_data: pd.DataFrame, test_data: pd.DataFrame) 
 
     Returns:
         Union[pd.DataFrame, pd.DataFrame]: 로그 변환이 적용된 학습용, 테스트용 데이터프레임.
+
     """
     #train_data log 변환: 가격, 면적, 지하철, 학교, 공원까지의 최단거리, 대장 아파트까지의 최단거리
     train_data["log_deposit"] = np.log1p(train_data["deposit"])
@@ -117,6 +129,7 @@ class ClusteringModel:
         self.data = data
 
     ### K-means 최적의 클러스터 수 찾는 메서드 ###
+
     def find_kmeans_n_clusters(self, max_clusters: int = 20) -> int:
         """
         K-means 클러스터링에서 최적의 클러스터 수를 찾는 함수 (Elbow Method 사용)
@@ -142,7 +155,7 @@ class ClusteringModel:
         # 최적의 클러스터 수 선택
         optimal_clusters = int(input("적절한 n_clusters를 선택해주세요 :"))
         print(f'KMeans Optimal_clusters: {optimal_clusters}')
-        
+
         return optimal_clusters
 
 

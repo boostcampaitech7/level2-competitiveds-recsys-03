@@ -98,6 +98,7 @@ class MissingValueImputer:
         # df가 DataFrame이 아닐 경우
         else:
             # 결측값을 평균값으로 대체하고 반환
+
             return df.fillna(df.mean())
 
 
@@ -140,6 +141,7 @@ class MissingValueImputer:
         Returns:
             pd.DataFrame: imputer한 DataFrame 반환
         """
+
         # 숫자형 데이터 열을 선택하여 리스트로 변환
         numeric_cols = df.select_dtypes(include=["number"]).columns.tolist()
 

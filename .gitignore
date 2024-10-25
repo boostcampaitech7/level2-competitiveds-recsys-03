@@ -2,7 +2,5 @@
 __pycache__/
 *.csv
 wandb/
-catboost_training.json
-learn_error.tsv
-time_left.tsv
-events.out.tfevents
+catboost_info/
+*.pth
