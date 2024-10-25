@@ -261,7 +261,7 @@ def merge_dataset(
     cm = ClusteringModel(data=coords)
 
     # 클러스터 개수(k) 설정
-    n_clusters = 30
+    n_clusters = 25
     
     # k-means 클러스터링 수행 후 train_data, test_data에 region 변수 추가
     kmeans = cm.kmeans_clustering(n_clusters, train_data, test_data, 
