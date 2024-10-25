@@ -1,7 +1,9 @@
 from xgboost import XGBRegressor
+from xgboost import XGBClassifier
 from lightgbm import LGBMRegressor
 from catboost import CatBoostRegressor
 from sklearn.ensemble import RandomForestRegressor
+from sklearn.ensemble import RandomForestClassifier
 from wandb.integration.xgboost import WandbCallback
 from wandb.integration.lightgbm import wandb_callback, log_summary
 import pandas as pd
@@ -12,7 +14,8 @@ class XGBoost:
         self.random_seed = random_seed
     
     def train(self, X_train: pd.DataFrame, y_train: pd.Series):
-        """모델 객체를 정의하고 fit하는 함수입니다.
+        """
+        모델 객체를 정의하고 fit하는 함수입니다.
 
         Args:
             X_train (pd.DataFrame): 독립 변수 데이터
@@ -26,9 +29,25 @@ class XGBoost:
         # self.model = XGBRegressor(**self.params, tree_method="hist", device="cuda", random_state=self.random_seed, callbacks=[WandbCallback(log_model=True)], n_jobs=-1) 
         self.model.fit(X_train, y_train)
         return self.model
+
+    def train_cls(self, X_train: pd.DataFrame, y_train: pd.Series):
+        """
+        모델 객체를 정의하고 fit하는 함수입니다.
+
+        Args:
+            X_train (pd.DataFrame): 독립 변수 데이터
+            y_train (pd.Series): 예측 변수 데이터
+
+        Returns:
+            Any: fit까지 완료된 모델 객체
+        """
+        self.model = XGBClassifier(**self.params, device="cuda", random_state=self.random_seed, use_label_encoder=False, n_jobs=-1)
+        self.model.fit(X_train, y_train)
+        return self.model
     
     def predict(self, X_valid: pd.DataFrame):
-        """fit된 모델을 기반으로 예측값을 출력하는 함수입니다.
+        """
+        fit된 모델을 기반으로 예측값을 출력하는 함수입니다.
 
         Args:
             X_valid (pd.DataFrame): 검증 데이터셋
@@ -42,7 +61,23 @@ class XGBoost:
         if self.model == None:
             raise ValueError("Model is not trained.")
         return self.model.predict(X_valid)
+    
+    def predict_proba(self, X_valid: pd.DataFrame):
+        """
+        fit된 모델을 기반으로 예측값을 출력하는 함수입니다.
 
+        Args:
+            X_valid (pd.DataFrame): 검증 데이터셋
+
+        Raises:
+            ValueError: fit을 하지 않고 해당 함수를 실행했을 때 발생
+
+        Returns:
+            np.ndarray: 예측 결과
+        """
+        if self.model == None:
+            raise ValueError("Model is not trained.")
+        return self.model.predict_proba(X_valid)
 
 class LightGBM:
     def __init__(self, random_seed: int = 42, **params):
@@ -50,7 +85,8 @@ class LightGBM:
         self.random_seed = random_seed
     
     def train(self, X_train: pd.DataFrame, y_train: pd.Series):
-        """모델 객체를 정의하고 fit하는 함수입니다.
+        """
+        모델 객체를 정의하고 fit하는 함수입니다.
 
         Args:
             X_train (pd.DataFrame): 독립 변수 데이터
@@ -70,7 +106,8 @@ class LightGBM:
         return self.model
     
     def predict(self, X_valid: pd.DataFrame):
-        """fit된 모델을 기반으로 예측값을 출력하는 함수입니다.
+        """
+        fit된 모델을 기반으로 예측값을 출력하는 함수입니다.
 
         Args:
             X_valid (pd.DataFrame): 검증 데이터셋
@@ -92,7 +129,8 @@ class CatBoost:
         self.random_seed = random_seed
     
     def train(self, X_train: pd.DataFrame, y_train: pd.Series):
-        """모델 객체를 정의하고 fit하는 함수입니다.
+        """
+        모델 객체를 정의하고 fit하는 함수입니다.
 
         Args:
             X_train (pd.DataFrame): 독립 변수 데이터
@@ -106,7 +144,8 @@ class CatBoost:
         return self.model
     
     def predict(self, X_valid: pd.DataFrame):
-        """fit된 모델을 기반으로 예측값을 출력하는 함수입니다.
+        """
+        fit된 모델을 기반으로 예측값을 출력하는 함수입니다.
 
         Args:
             X_valid (pd.DataFrame): 검증 데이터셋
@@ -127,7 +166,8 @@ class RandomForest:
         self.random_seed = random_seed
     
     def train(self, X_train: pd.DataFrame, y_train: pd.Series):
-        """모델 객체를 정의하고 fit하는 함수입니다.
+        """
+        모델 객체를 정의하고 fit하는 함수입니다.
 
         Args:
             X_train (pd.DataFrame): 독립 변수 데이터
@@ -140,8 +180,24 @@ class RandomForest:
         self.model.fit(X_train, y_train)
         return self.model
     
+    def train_cls(self, X_train: pd.DataFrame, y_train: pd.Series):
+        """
+        모델 객체를 정의하고 fit하는 함수입니다.
+
+        Args:
+            X_train (pd.DataFrame): 독립 변수 데이터
+            y_train (pd.Series): 예측 변수 데이터
+
+        Returns:
+            Any: fit까지 완료된 모델 객체
+        """
+        self.model = RandomForestClassifier(**self.params, random_state=self.random_seed, n_jobs=-1)
+        self.model.fit(X_train, y_train)
+        return self.model
+    
     def predict(self, X_valid: pd.DataFrame):
-        """fit된 모델을 기반으로 예측값을 출력하는 함수입니다.
+        """
+        fit된 모델을 기반으로 예측값을 출력하는 함수입니다.
 
         Args:
             X_valid (pd.DataFrame): 검증 데이터셋
@@ -155,3 +211,20 @@ class RandomForest:
         if self.model == None:
             raise ValueError("Model is not trained.")
         return self.model.predict(X_valid)
+
+    def predict_proba(self, X_valid: pd.DataFrame):
+        """
+        fit된 모델을 기반으로 예측값을 출력하는 함수입니다.
+
+        Args:
+            X_valid (pd.DataFrame): 검증 데이터셋
+
+        Raises:
+            ValueError: fit을 하지 않고 해당 함수를 실행했을 때 발생
+
+        Returns:
+            np.ndarray: 예측 결과
+        """
+        if self.model == None:
+            raise ValueError("Model is not trained.")
+        return self.model.predict_proba(X_valid)

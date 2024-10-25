@@ -7,8 +7,8 @@ from catboost import CatBoostRegressor
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.linear_model import LinearRegression
 from sklearn.base import BaseEstimator
-from sklearn.metrics import mean_absolute_error
-from sklearn.model_selection import KFold
+from sklearn.metrics import mean_absolute_error, log_loss
+from sklearn.model_selection import KFold, train_test_split
 from model.TreeModel import XGBoost, LightGBM, CatBoost, RandomForest
 from model.Ensemble import Voting, Stacking
 import optuna
@@ -339,3 +339,107 @@ def stacking_train(
     best_models = study.best_trial.user_attrs["models"]
 
     return best_models, study.best_value
+
+def deposit_train(
+        model_name: str,
+        type: str,
+        X: pd.DataFrame,
+        y: pd.DataFrame,
+        params: dict
+    ) -> float:
+    """
+    훈련/검증 데이터로 분할해 성능 점수를 반환하는 함수입니다.
+
+    Args:
+        model_name (str): 사용할 모델 이름
+        type (str): 모델의 타입을 나타내며, "cls"는 Classifier, "reg"는 Regressor를 의미
+        X (pd.DataFrame): 독립변수
+        y (pd.DataFrame): 예측변수
+        params (dict): 하이퍼파라미터
+
+    Returns:
+        float: 검증 데이터에 대한 성능 점수. 
+                "cls" 타입의 경우 로그 손실(log loss), 
+                "reg" 타입의 경우 평균 절대 오차(mean absolute error)를 반환
+    """
+    X_train, X_valid, y_train, y_valid = train_test_split(X, y, test_size=0.2, random_state=RANDOM_SEED)
+
+    model = set_model(model_name, params)
+    match type:
+        case "cls":
+            model.train_cls(X_train, y_train)
+            y_pred_proba = model.predict_proba(X_valid)
+            score = log_loss(y_valid, y_pred_proba)
+        case "reg":
+            model.train(X_train, y_train)
+            y_pred = model.predict(X_valid)
+            score = mean_absolute_error(y_valid, y_pred)
+
+    return score
+
+def deposit_optuna_train(
+        model_name: str,
+        type: str,
+        X: pd.DataFrame,
+        y: pd.DataFrame,
+        n_trials: int = 50
+    ) -> tuple[dict[str, Any], float]:
+    """
+    Optuna를 사용하여 주어진 모델의 하이퍼파라미터 최적화를 수행하는 함수입니다.
+
+    Args:
+        model_name (str): 사용할 모델 이름
+        type (str): 모델의 타입을 나타내며, "cls"는 Classifier, "reg"는 Regressor를 의미
+        X (pd.DataFrame): 독립변수
+        y (pd.DataFrame): 예측변수
+        n_trials (int, optional): Optuna가 최적화를 위해 수행할 시험 횟수 (Defaults to 50)
+
+    Returns:
+        tuple[dict[str, Any], float]:
+            - 1: 최적의 하이퍼파라미터
+            - 2: 최적의 성능 점수
+    """
+    def objective(trial):
+        match type:
+            case "cls":
+                match model_name:
+                    case "xgboost":
+                        params = {
+                                "n_estimators": trial.suggest_int("n_estimators", 50, 300),
+                                "learning_rate": trial.suggest_float("learning_rate", 0.01, 0.2),
+                                "max_depth": trial.suggest_int("max_depth", 3, 12),
+                                "subsample": trial.suggest_float("subsample", 0.5, 1.0),
+                                "colsample_bytree": trial.suggest_float("colsample_bytree", 0.5, 1.0),
+                                "gamma": trial.suggest_float("gamma", 0, 5),
+                            }
+                    case "randomforest":
+                        params = {
+                                "n_estimators": trial.suggest_int("n_estimators", 50, 300),
+                                "max_depth": trial.suggest_int("max_depth", 1, 30),
+                                "min_samples_split": trial.suggest_int("min_samples_split", 2, 10),
+                                "min_samples_leaf": trial.suggest_int("min_samples_leaf", 1, 10),
+                            }
+            case "reg":
+                match model_name:
+                    case "xgboost":
+                        params = {
+                                "n_estimators": trial.suggest_int("n_estimators", 50, 300),
+                                "learning_rate": trial.suggest_float("learning_rate", 0.01, 0.2),
+                                "max_depth": trial.suggest_int("max_depth", 3, 12),
+                                "subsample": trial.suggest_float("subsample", 0.5, 1.0),
+                                "colsample_bytree": trial.suggest_float("colsample_bytree", 0.5, 1.0),
+                                "gamma": trial.suggest_float("gamma", 0, 5),
+                            }
+                    case "randomforest":
+                        params = {
+                                "n_estimators": trial.suggest_int("n_estimators", 50, 300),
+                                "max_depth": trial.suggest_int("max_depth", 1, 30),
+                                "min_samples_split": trial.suggest_int("min_samples_split", 2, 10),
+                                "min_samples_leaf": trial.suggest_int("min_samples_leaf", 1, 10),
+                            }
+        return deposit_train(model_name, type, X, y, params)
+    
+    sampler = optuna.samplers.TPESampler(seed=RANDOM_SEED)
+    study = optuna.create_study(direction="minimize", sampler=sampler)
+    study.optimize(objective, n_trials=n_trials)
+    return study.best_params, study.best_value
