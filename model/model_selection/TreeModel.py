@@ -12,7 +12,8 @@ class XGBoost:
         self.random_seed = random_seed
     
     def train(self, X_train: pd.DataFrame, y_train: pd.Series):
-        """모델 객체를 정의하고 fit하는 함수입니다.
+        """
+        모델 객체를 정의하고 fit하는 함수입니다.
 
         Args:
             X_train (pd.DataFrame): 독립 변수 데이터
@@ -28,7 +29,8 @@ class XGBoost:
         return self.model
     
     def predict(self, X_valid: pd.DataFrame):
-        """fit된 모델을 기반으로 예측값을 출력하는 함수입니다.
+        """
+        fit된 모델을 기반으로 예측값을 출력하는 함수입니다.
 
         Args:
             X_valid (pd.DataFrame): 검증 데이터셋
@@ -50,7 +52,8 @@ class LightGBM:
         self.random_seed = random_seed
     
     def train(self, X_train: pd.DataFrame, y_train: pd.Series):
-        """모델 객체를 정의하고 fit하는 함수입니다.
+        """
+        모델 객체를 정의하고 fit하는 함수입니다.
 
         Args:
             X_train (pd.DataFrame): 독립 변수 데이터
@@ -70,7 +73,8 @@ class LightGBM:
         return self.model
     
     def predict(self, X_valid: pd.DataFrame):
-        """fit된 모델을 기반으로 예측값을 출력하는 함수입니다.
+        """
+        fit된 모델을 기반으로 예측값을 출력하는 함수입니다.
 
         Args:
             X_valid (pd.DataFrame): 검증 데이터셋
@@ -92,7 +96,8 @@ class CatBoost:
         self.random_seed = random_seed
     
     def train(self, X_train: pd.DataFrame, y_train: pd.Series):
-        """모델 객체를 정의하고 fit하는 함수입니다.
+        """
+        모델 객체를 정의하고 fit하는 함수입니다.
 
         Args:
             X_train (pd.DataFrame): 독립 변수 데이터
@@ -106,7 +111,8 @@ class CatBoost:
         return self.model
     
     def predict(self, X_valid: pd.DataFrame):
-        """fit된 모델을 기반으로 예측값을 출력하는 함수입니다.
+        """
+        fit된 모델을 기반으로 예측값을 출력하는 함수입니다.
 
         Args:
             X_valid (pd.DataFrame): 검증 데이터셋
@@ -127,7 +133,8 @@ class RandomForest:
         self.random_seed = random_seed
     
     def train(self, X_train: pd.DataFrame, y_train: pd.Series):
-        """모델 객체를 정의하고 fit하는 함수입니다.
+        """
+        모델 객체를 정의하고 fit하는 함수입니다.
 
         Args:
             X_train (pd.DataFrame): 독립 변수 데이터
@@ -141,7 +148,8 @@ class RandomForest:
         return self.model
     
     def predict(self, X_valid: pd.DataFrame):
-        """fit된 모델을 기반으로 예측값을 출력하는 함수입니다.
+        """
+        fit된 모델을 기반으로 예측값을 출력하는 함수입니다.
 
         Args:
             X_valid (pd.DataFrame): 검증 데이터셋
