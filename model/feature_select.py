@@ -3,7 +3,7 @@ from sklearn.linear_model import Lasso
 import pandas as pd
 import xgboost as xgb
 
-def select_features(train_data: pd.DataFrame, test_data: pd.DataFrame):
+def select_features(train_data: pd.DataFrame, test_data: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
     """
     학습 데이터와 테스트 데이터에서 사용할 피처(컬럼)를 선택하는 함수.
 
@@ -42,7 +42,7 @@ def select_features(train_data: pd.DataFrame, test_data: pd.DataFrame):
 
     return X_selected, test_data_selected
 
-def select_kbest(X, y, target, k=10):
+def select_kbest(X, y, target, k=10) -> list[str]:
     """
     SelectKBest 방법을 사용하여 상위 k개의 특성 선택
 
@@ -64,7 +64,7 @@ def select_kbest(X, y, target, k=10):
 
     return selected_cols
 
-def select_rfe(X, y, target, n_features_to_select=10, model_type="xgboost"):
+def select_rfe(X, y, target, n_features_to_select=10, model_type="xgboost") -> list[str]:
     """
     RFE(Recursive Feature Elimination)을 사용하여 피처 선택
 

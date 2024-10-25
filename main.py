@@ -6,6 +6,7 @@ from model.inference import save_csv
 from model.feature_select import select_features
 from model.data_split import split_features_and_target
 from model.model_train import *
+from sklearn.linear_model import LinearRegression
 import argparse
 import os
 import wandb
@@ -90,10 +91,10 @@ if __name__ == "__main__":
                 best_model = best_model.train(X, y["log_deposit"])
             else:
                 best_params = {
-                    'n_estimators': 249,
-                    'learning_rate': 0.1647758714498898,
-                    'max_depth': 12,
-                    'subsample': 0.9996749158433582
+                    "n_estimators": 249,
+                    "learning_rate": 0.1647758714498898,
+                    "max_depth": 12,
+                    "subsample": 0.9996749158433582
                 }
 
                 best_model = set_model(args.model, best_params)

@@ -14,7 +14,7 @@ class Voting:
         self.models = models
         self.weights = weights
     
-    def train(self, X_train: pd.DataFrame, y_train: pd.Series):
+    def train(self, X_train: pd.DataFrame, y_train: pd.Series) -> object:
         """
         모델 객체를 정의하고 fit하는 함수입니다.
 
@@ -23,7 +23,7 @@ class Voting:
             y_train (pd.Series): 예측 변수 데이터
 
         Returns:
-            Any: fit까지 완료된 모델 객체
+            object: fit까지 완료된 모델 객체
         """
         self.voting_model = VotingRegressor(estimators=self.models, weights=self.weights)
         self.voting_model.fit(X_train, y_train)
@@ -55,7 +55,7 @@ class Stacking:
         self.models = models
         self.meta_model = meta_model
     
-    def train(self, X_train: pd.DataFrame, y_train: pd.Series):
+    def train(self, X_train: pd.DataFrame, y_train: pd.Series) -> object:
         """
         모델 객체를 정의하고 fit하는 함수입니다.
 
@@ -64,13 +64,13 @@ class Stacking:
             y_train (pd.Series): 예측 변수 데이터
 
         Returns:
-            Any: fit까지 완료된 모델 객체
+            object: fit까지 완료된 모델 객체
         """
         self.stacking_model = StackingRegressor(self.models, self.meta_model, cv=5, n_jobs=-1)
         self.stacking_model.fit(X_train, y_train)
         return self.stacking_model
     
-    def predict(self, X_valid: pd.DataFrame):
+    def predict(self, X_valid: pd.DataFrame) -> np.ndarray:
         """
         fit된 모델을 기반으로 예측값을 출력하는 함수입니다.
 

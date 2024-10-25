@@ -2,7 +2,6 @@ from data.load_dataset import load_dataset
 from data.merge_dataset import merge_dataset
 from data.data_preprocessing import *
 from data.feature_engineering import *
-from model.inference import save_csv
 from model.feature_select import select_features
 from model.data_split import split_features_and_target
 from model.model_train import *
@@ -52,13 +51,7 @@ if __name__ == "__main__":
     # cut_index = urgent_sale_cut(train_data, 2.5)
 
     # 위치 중복도 낮은 행 삭제
-    groups = train_data.groupby(["latitude", "longitude"])["index"].count()
-    conditioned_groups_index = groups[(groups >= 2) & (groups <= 5)].index # 이 범위를 파라미터로 조정하는걸로
-    small_groups = train_data[
-        train_data["latitude"].isin(conditioned_groups_index.get_level_values(0)) &
-        train_data["longitude"].isin(conditioned_groups_index.get_level_values(1))
-    ]
-    train_data.drop(small_groups.index, axis=0, inplace=True)
+    train_data = delete_low_density(train_data, 2, 5)
     
     # built_year > 2024 행 삭제
     train_data = train_data[train_data["built_year"] < 2024]

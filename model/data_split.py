@@ -1,6 +1,6 @@
 import pandas as pd
 
-def split_features_and_target(train_data: pd.DataFrame, target: list):
+def split_features_and_target(train_data: pd.DataFrame, target: list) -> tuple[pd.DataFrame, pd.DataFrame]:
     """
     학습 데이터에서 피처와 타겟 변수를 분리하는 함수.
 
