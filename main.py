@@ -72,7 +72,7 @@ if __name__ == "__main__":
     train_data, test_data = apply_log_transformation(train_data, test_data)
 
     # train_data split
-    X, y = split_features_and_target(train_data)
+    X, y = split_features_and_target(train_data, target=["deposit", "log_deposit"])
     
     # Feature Select
     X, test_data = select_features(X, y, test_data)
