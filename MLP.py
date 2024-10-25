@@ -127,7 +127,16 @@ class SimpleModel(nn.Module):
         self.softplus = nn.Softplus()
         self.dropout = nn.Dropout(p=0.2)
 
-    def forward(self, x):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """
+        순전파 메서드입니다.
+
+        Args:
+            x (torch.Tensor): 입력 텐서
+
+        Returns:
+            torch.Tensor: 출력 텐서
+        """
         x = self.relu(self.fc1(x))
         x = self.dropout(x)
         x = self.relu(self.fc2(x))
