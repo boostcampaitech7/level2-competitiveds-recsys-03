@@ -14,11 +14,15 @@ def outlier_detection(data: pd.Series) -> pd.Series:
     Returns:
         pd.Series: 이상치에 해당하는 데이터 Series 반환
     """
+    # IQR 계산 
     Q1 = data.quantile(0.25)
-    Q3 = data.quantile(0.75)
+    Q3 = data.quantile(0.75) 
     IQR = Q3 - Q1
+
+    # 안 울타리 경계 지정 (기준 1.5 step)
     lower_bound = Q1 - 1.5 * IQR
     upper_bound = Q3 + 1.5 * IQR
+    
     return data[(data < lower_bound) | (data > upper_bound)]
 
 
@@ -80,13 +84,21 @@ class MissingValueImputer:
         Returns:
             Union[pd.DataFrame, pd.Series]: imputer한 DataFrame 또는 Series 반환
         """
-
+        # df가 pandas DataFrame인지 확인
         if isinstance(df, pd.DataFrame):
+            # 숫자형 데이터 열을 선택하여 리스트로 변환
             numeric_cols = df.select_dtypes(include=["number"]).columns.tolist()
+    
+            # 선택한 숫자형 열의 결측값을 각 열의 평균값으로 대체
             df[numeric_cols] = df[numeric_cols].fillna(df[numeric_cols].mean())
-            return df 
-               
-        elif isinstance(df, pd.Series):
+    
+            # 결측값이 대체된 데이터프레임 반환
+            return df
+
+        # df가 DataFrame이 아닐 경우
+        else:
+            # 결측값을 평균값으로 대체하고 반환
+
             return df.fillna(df.mean())
 
 
@@ -100,14 +112,21 @@ class MissingValueImputer:
 
         Returns:
             Union[pd.DataFrame, pd.Series]: imputer한 DataFrame 또는 Series 반환
-        """
-
-        if isinstance(df, pd.DataFrame):
+        """        
+        # df가 pandas DataFrame인지 확인
+        if isinstance(df, pd.DataFrame):        
+            # 숫자형 데이터 열을 선택하여 리스트로 변환
             numeric_cols = df.select_dtypes(include=["number"]).columns.tolist()
+    
+            # 선택한 숫자형 열의 결측값을 각 열의 중앙값으로 대체
             df[numeric_cols] = df[numeric_cols].fillna(df[numeric_cols].median())
+    
+            # 결측값이 대체된 데이터프레임 반환
             return df
-        
-        elif isinstance(df, pd.Series):
+
+        # df가 DataFrame이 아닐 경우
+        else:
+            # 결측값을 중앙값으로 대체하고 반환
             return df.fillna(df.median())
 
 
@@ -123,11 +142,22 @@ class MissingValueImputer:
             pd.DataFrame: imputer한 DataFrame 반환
         """
 
+        # 숫자형 데이터 열을 선택하여 리스트로 변환
         numeric_cols = df.select_dtypes(include=["number"]).columns.tolist()
+
+        # IterativeImputer 클래스 불러오기
         imputer = IterativeImputer()
+
+        # 선택한 숫자형 열에 대해 IterativeImputer를 적용하여 결측값을 대체
         df_imputed_array = imputer.fit_transform(df[numeric_cols])
+
+        # 대체된 데이터를 데이터프레임으로 변환
         imputed_df = pd.DataFrame(df_imputed_array, columns=numeric_cols)
+
+        # 원본 데이터프레임의 숫자형 열에 대체된 값으로 업데이트
         df[numeric_cols] = imputed_df.values
+
+        # 결측값이 대체된 데이터프레임 반환
         return df
 
 
@@ -142,10 +172,60 @@ class MissingValueImputer:
         Returns:
             pd.DataFrame: imputer한 DataFrame 반환
         """
-
+        # 숫자형 데이터 열을 선택하여 리스트로 변환
         numeric_cols = df.select_dtypes(include=["number"]).columns.tolist()
+
+        # KNNImputer 클래스 불러오기
         imputer = KNNImputer()
+
+        # 선택한 숫자형 열에 대해 KNNImputer를 적용하여 결측값을 대체
         df_imputed_array = imputer.fit_transform(df[numeric_cols])
+
+        # 대체된 데이터를 데이터프레임으로 변환
         imputed_df = pd.DataFrame(df_imputed_array, columns=numeric_cols)
+
+        # 원본 데이터프레임의 숫자형 열에 대체된 값으로 업데이트
         df[numeric_cols] = imputed_df.values
+
+        # 결측값이 대체된 데이터프레임 반환
         return df
+
+
+
+### 급처매물 제거 함수 ###
+def urgent_sale_cut(data: pd.DataFrame, sigma_weight: float) -> list[int]:
+    """
+    train_data에서 위도, 경도를 그룹화 하여 그룹별 가격에 대한 급처매물을 제거하는 함수
+
+    Args:
+        data (pd.DataFrame): 무조건 merge_dataset()함수를 통해서 불러온 train_data를 넣을 것
+        sigma_weight (float): 표준편차에 대한 가중치
+
+    Returns:
+        list[float]: train_data에서 급처매물인 index의 list 반환
+    """
+    # 위도, 경도를 그룹별로 묶어 데이터프레임 생성
+    grouped = data.groupby(["latitude", "longitude"])
+    grouped_indices = grouped.groups
+    value_list = list(grouped_indices.values())
+
+    # 결과를 저장할 리스트
+    filtered_data_list = []
+
+    # 각 그룹에 대해 평균과 표준편차 계산 후 필터링
+    for i in range(len(value_list)):
+        indices = value_list[i]
+
+        # 해당 그룹의 deposit 값으로 mean과 std 계산
+        key_mean = data.loc[indices]["deposit"].mean()
+        key_std = data.loc[indices]["deposit"].std()
+        key_benchmark = key_mean - sigma_weight * key_std
+
+        # 조건을 만족하는 행을 필터링하여 리스트에 추가
+        filtered_data = data.loc[indices]
+
+        # 조건을 만족하는 행의 index 값을 가져와서 리스트에 추가
+        filtered_indices = filtered_data[filtered_data["deposit"] < key_benchmark].index
+        filtered_data_list.extend(filtered_indices.tolist())
+        
+    return filtered_data_list
